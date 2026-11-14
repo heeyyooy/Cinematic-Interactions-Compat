@@ -20,7 +20,7 @@ is required. You can also double-click `build.bat`.
 The build output is:
 
 ```text
-build\\libs\\Cinematic-Interactions-Compat-Addon-NeoForge-1.21.1-1.0.5.jar
+build\\libs\\Cinematic-Interactions-Compat-Addon-NeoForge-1.21.1-1.0.0.jar
 ```
 
 Only the generated `Cinematic-Interactions-Compat-Addon-...jar` is the addon.
@@ -49,7 +49,14 @@ not included in the resulting addon.
 - Caverns & Chasms Bejeweled Anvil
 - Amendments writable lectern menu payload and lectern BlockEntity subclasses
 
+Easy Magic's and Easy Anvils' own item renderers are temporarily suppressed only
+while Cinematic Interactions is showing the matching workstation scene. Their
+stored container items are not changed; the mods' normal renderers resume when
+the scene ends. Easy Magic's separate enchantment clues are also used by the
+enchanting scene so its availability tooltip does not incorrectly report
+limited enchantability.
+
 ## Important status
 
-This repository archive contains buildable source files, not a precompiled mod
-JAR. The generated binary has to be produced by running the command above.
+This repository contains buildable source files, not a precompiled mod JAR.
+The generated binary has to be produced by running the command above.

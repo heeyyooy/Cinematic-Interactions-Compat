@@ -9,6 +9,11 @@
     "MenuActionsLecternDataMixin",
     "AmendmentsLecternEntityMixin"
   ],
+  "client": [
+    "EnchantStationEasyMagicMixin",
+    "EasyMagicRendererMixin",
+    "EasyAnvilsRendererMixin"
+  ],
   "injectors": {
     "defaultRequire": 1
   }
