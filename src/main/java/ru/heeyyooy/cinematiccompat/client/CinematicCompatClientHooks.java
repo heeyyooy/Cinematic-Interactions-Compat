@@ -1,4 +1,4 @@
-package ru.heeyyooy.cinematiccompat.mixin;
+package ru.heeyyooy.cinematiccompat.client;
 
 import net.minecraft.core.BlockPos;
 
@@ -8,6 +8,9 @@ import java.lang.reflect.Method;
 /**
  * Accesses the current Cinematic Interactions scene without making its client
  * implementation a compile-time dependency of this compatibility addon.
+ *
+ * This class deliberately lives outside the mixin package: Mixin reserves that
+ * package for mixin classes and rejects ordinary classes loaded from it.
  */
 public final class CinematicCompatClientHooks {
     private static final Method ACTIVE_METHOD;

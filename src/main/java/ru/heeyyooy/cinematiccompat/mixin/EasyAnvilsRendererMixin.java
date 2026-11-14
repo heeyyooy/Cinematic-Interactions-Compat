@@ -1,5 +1,7 @@
 package ru.heeyyooy.cinematiccompat.mixin;
 
+import ru.heeyyooy.cinematiccompat.client.CinematicCompatClientHooks;
+
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.world.level.block.entity.BlockEntity;
