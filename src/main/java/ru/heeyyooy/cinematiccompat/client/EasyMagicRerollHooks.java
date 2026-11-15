@@ -21,7 +21,7 @@ import java.lang.reflect.Method;
  * loads when Easy Magic is not installed.
  */
 public final class EasyMagicRerollHooks {
-    private static final double RUNE_BACKGROUND_SCALE = 0.30;
+    private static final double RUNE_BACKGROUND_SCALE = 0.70;
     private static final float CLOCK_MODEL_SCALE = 0.713f;
     private static final Class<?> MENU_CLASS;
     private static final Method CAN_ENCHANT_ITEM;
@@ -421,11 +421,11 @@ public final class EasyMagicRerollHooks {
 
         // The rune background has its own opacity animation, independent of the clock scale.
         if (background > 0.005f) {
-            float brightness = baseBrightness * background;
+            float brightness = Math.max(baseBrightness, 0.78f) * background;
             drawCircle(pose, buffers, cameraPos, center,
                     0.132 * RUNE_BACKGROUND_SCALE * hoverScale,
                     clock * (hovered ? 0.78 : 0.30), outerPalette, brightness);
-            drawCircle(pose, buffers, cameraPos, center.add(0.0, 0.001 * RUNE_BACKGROUND_SCALE, 0.0),
+            drawCircle(pose, buffers, cameraPos, center.add(0.0, 0.001, 0.0),
                     0.078 * RUNE_BACKGROUND_SCALE * hoverScale,
                     -clock * 0.52, innerPalette, brightness * 0.74f);
             drawGlow(pose, buffers, camera, center.add(0.0, 0.018 * RUNE_BACKGROUND_SCALE, 0.0),
