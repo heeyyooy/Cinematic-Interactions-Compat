@@ -111,9 +111,11 @@ public abstract class EnchantStationRerollButtonMixin {
                 player.playSound(SoundEvents.AMETHYST_BLOCK_RESONATE, 0.85f, 1.15f);
             }
         } else {
+            EasyMagicRerollHooks.markRerollDenied();
             LocalPlayer player = Minecraft.getInstance().player;
             if (player != null) {
-                player.playSound(SoundEvents.CHAIN_HIT, 0.45f, 0.85f);
+                // Same deny feedback as Cinematic Interactions' unaffordable enchant offer.
+                player.playSound(SoundEvents.CANDLE_EXTINGUISH, 0.7f, 0.7f);
             }
         }
     }

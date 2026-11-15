@@ -24,8 +24,10 @@ import java.lang.reflect.Method;
  */
 public final class EasyMagicRerollHooks {
     private static volatile boolean handTapRequested;
-    private static final double VIOLET_SOCKET_RADIUS = 0.10;
-    private static final double BLUE_PERIMETER_RADIUS = 0.115;
+    private static volatile double rerollDeniedAt = -10.0;
+    private static final double VIOLET_SOCKET_RADIUS = 0.10 * 0.20;
+    private static final double BLUE_PERIMETER_RADIUS = 0.115 * 0.15;
+    private static final double BLUE_GLOW_SCALE = 0.15;
     private static final double SOCKET_CIRCLE_LIFT = 0.016;
     private static final double OUTER_CIRCLE_LIFT = 0.012;
     private static final float CLOCK_MODEL_SCALE = 0.713f;
@@ -513,6 +515,23 @@ public final class EasyMagicRerollHooks {
         };
     }
 
+    /** Store the failed-attempt time, matching EnchantStation's denyAt effect. */
+    public static void markRerollDenied() {
+        rerollDeniedAt = clock();
+    }
+
+    /** Exact horizontal denial shake used by EnchantStation.sigilPos(). */
+    private static Vec3 denialShake(Vec3 position, Direction facing, double now) {
+        double age = now - rerollDeniedAt;
+        if (age < 0.0 || age >= 0.35 || facing == null) {
+            return position;
+        }
+
+        Vec3 right = Vec3.atLowerCornerOf(facing.getOpposite().getClockWise().getNormal());
+        double offset = 0.02 * Math.sin(age * 60.0) * (1.0 - age / 0.35);
+        return position.add(right.scale(offset));
+    }
+
     /** The clock grows in during intro and shrinks away during outro. */
     private static float clockPresence() {
         return switch (scenePhase()) {
@@ -555,6 +574,9 @@ public final class EasyMagicRerollHooks {
         Vec3 cameraPos = camera.getPosition();
         double clock = clock();
         double layoutScale = lapisSocketScale(station);
+        // Move the whole clock + rune group together using EnchantStation's
+        // exact failed-enchantment shake (0.02 blocks, 0.35 seconds, 60 rad/s).
+        Vec3 visualPosition = denialShake(position, facing, clock);
         float hoverScale = hovered ? 1.10f : 1.0f;
         float baseBrightness = affordable
                 ? (hovered ? 0.92f : 0.68f)
@@ -565,8 +587,8 @@ public final class EasyMagicRerollHooks {
         // The lapis-blue perimeter extends just beyond that pad.
         Object outerPalette = palette(affordable ? "LAPIS" : "RED");
         Object innerPalette = palette(affordable ? "VIOLET" : "RED");
-        Vec3 violetCenter = position.add(0.0, SOCKET_CIRCLE_LIFT, 0.0);
-        Vec3 blueCenter = position.add(0.0, OUTER_CIRCLE_LIFT, 0.0);
+        Vec3 violetCenter = visualPosition.add(0.0, SOCKET_CIRCLE_LIFT, 0.0);
+        Vec3 blueCenter = visualPosition.add(0.0, OUTER_CIRCLE_LIFT, 0.0);
 
         if (background > 0.005f) {
             float brightness = baseBrightness * background;
@@ -600,8 +622,8 @@ public final class EasyMagicRerollHooks {
                     pose,
                     buffers,
                     camera,
-                    position.add(0.0, 0.030 * layoutScale, 0.0),
-                    0.15 * layoutScale * hoverScale,
+                    visualPosition.add(0.0, 0.030 * layoutScale, 0.0),
+                    0.15 * BLUE_GLOW_SCALE * layoutScale * hoverScale,
                     glowRed * brightness,
                     glowGreen * brightness,
                     glowBlue * brightness,
@@ -615,7 +637,7 @@ public final class EasyMagicRerollHooks {
                         buffers,
                         cameraPos,
                         violetCenter.add(0.0, 0.003, 0.0),
-                        (BLUE_PERIMETER_RADIUS + 0.018 * (1.0 - flash)) * layoutScale,
+                        (BLUE_PERIMETER_RADIUS + 0.018 * BLUE_GLOW_SCALE * (1.0 - flash)) * layoutScale,
                         clock * 1.8,
                         outerPalette,
                         flash * 0.95f
@@ -628,8 +650,8 @@ public final class EasyMagicRerollHooks {
                 try {
                     ENCHANT_FX_SPARKLE.invoke(
                             null,
-                            violetCenter.add(0.0, 0.025 * layoutScale, 0.0),
-                            0.09 * layoutScale
+                            violetCenter.add(0.0, 0.025 * BLUE_GLOW_SCALE * layoutScale, 0.0),
+                            0.09 * BLUE_GLOW_SCALE * layoutScale
                     );
                 } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
                     // Purely decorative.
@@ -646,7 +668,7 @@ public final class EasyMagicRerollHooks {
                         buffers,
                         cameraPos,
                         new ItemStack(Items.CLOCK),
-                        position.add(0.0, 0.009, 0.0),
+                        visualPosition.add(0.0, 0.009, 0.0),
                         facing == null ? Direction.NORTH : facing,
                         0x5245524F4C4CL,
                         CLOCK_MODEL_SCALE * clockScale * hoverScale,
