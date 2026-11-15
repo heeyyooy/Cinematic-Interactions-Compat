@@ -1,12 +1,11 @@
 package ru.heeyyooy.cinematiccompat.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Camera;
-import net.minecraft.client.gui.Font;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
@@ -326,92 +325,42 @@ public final class EasyMagicRerollHooks {
     }
 
     /**
-     * Displays the actual configured costs directly above the physical clock.
-     * XP points and enchantment levels are distinguished because Easy Magic
-     * exposes those as separate cost modes.
+     * The bottom scene hint combines the native reroll action with the actual
+     * configured costs. Creative players do not pay these costs, so hide them.
      */
-    private static void renderCostInfo(
-            PoseStack pose,
-            MultiBufferSource buffers,
-            Camera camera,
-            Vec3 position,
-            float presence) {
-        if (presence <= 0.01f) return;
+    public static Component rerollHint() {
+        Component base = Component.translatable("cinematiccompat.hint.reroll");
+        LocalPlayer player = Minecraft.getInstance().player;
+        if (player == null || player.getAbilities().instabuild) {
+            return base;
+        }
 
         int catalystCost = configInt(REROLL_CATALYST_COST);
         int experienceCost = configInt(REROLL_EXPERIENCE_COST);
-        if (catalystCost < 0 || experienceCost < 0) return;
+        if (catalystCost < 0 || experienceCost < 0) {
+            return base;
+        }
 
         boolean takesLevels = configBoolean(REROLLING_TAKES_LEVELS, false);
-        String catalystLine = catalystCost > 0
-                ? Component.translatable(
-                        "cinematiccompat.reroll.cost.catalyst",
-                        catalystName(),
-                        catalystCost).getString()
-                : null;
-        String experienceLine = experienceCost > 0
-                ? Component.translatable(
-                        takesLevels
-                                ? "cinematiccompat.reroll.cost.levels"
-                                : "cinematiccompat.reroll.cost.experience",
-                        experienceCost).getString()
-                : null;
-
-        if (catalystLine == null && experienceLine == null) {
-            catalystLine = Component.translatable("cinematiccompat.reroll.cost.free").getString();
+        var hint = Component.translatable("cinematiccompat.hint.reroll");
+        if (catalystCost > 0) {
+            hint.append(Component.literal("  · ").withStyle(ChatFormatting.DARK_GRAY));
+            hint.append(Component.translatable(
+                    "cinematiccompat.reroll.cost.catalyst",
+                    catalystName(),
+                    catalystCost
+            ).withStyle(ChatFormatting.AQUA));
         }
-
-        Font font = Minecraft.getInstance().font;
-        Vec3 cameraPos = camera.getPosition();
-        Vec3 labelPos = position.add(0.0, 0.205, 0.0);
-        int alpha = Math.max(0, Math.min(255, Math.round(235 * presence)));
-        pose.pushPose();
-        pose.translate(labelPos.x - cameraPos.x, labelPos.y - cameraPos.y, labelPos.z - cameraPos.z);
-        pose.mulPose(camera.rotation());
-        pose.scale(0.0042f, -0.0042f, 0.0042f);
-
-        if (catalystLine != null && experienceLine != null) {
-            font.drawInBatch(
-                    catalystLine,
-                    -font.width(catalystLine) / 2.0f,
-                    -9.0f,
-                    (alpha << 24) | 0x9CC8FF,
-                    true,
-                    pose.last().pose(),
-                    buffers,
-                    Font.DisplayMode.NORMAL,
-                    0,
-                    LightTexture.FULL_BRIGHT
-            );
-            font.drawInBatch(
-                    experienceLine,
-                    -font.width(experienceLine) / 2.0f,
-                    2.0f,
-                    (alpha << 24) | (takesLevels ? 0xFFD58A : 0xA5E6A7),
-                    true,
-                    pose.last().pose(),
-                    buffers,
-                    Font.DisplayMode.NORMAL,
-                    0,
-                    LightTexture.FULL_BRIGHT
-            );
-        } else {
-            String line = catalystLine != null ? catalystLine : experienceLine;
-            int color = catalystLine != null ? 0x9CC8FF : (takesLevels ? 0xFFD58A : 0xA5E6A7);
-            font.drawInBatch(
-                    line,
-                    -font.width(line) / 2.0f,
-                    -4.5f,
-                    (alpha << 24) | color,
-                    true,
-                    pose.last().pose(),
-                    buffers,
-                    Font.DisplayMode.NORMAL,
-                    0,
-                    LightTexture.FULL_BRIGHT
-            );
+        if (experienceCost > 0) {
+            hint.append(Component.literal("  · ").withStyle(ChatFormatting.DARK_GRAY));
+            hint.append(Component.translatable(
+                    takesLevels
+                            ? "cinematiccompat.reroll.cost.levels"
+                            : "cinematiccompat.reroll.cost.experience",
+                    experienceCost
+            ).withStyle(takesLevels ? ChatFormatting.GOLD : ChatFormatting.GREEN));
         }
-        pose.popPose();
+        return hint;
     }
 
     /**
@@ -650,14 +599,10 @@ public final class EasyMagicRerollHooks {
             }
         }
 
-        // Keep the cost label attached to the clock and let it fade with the rune
-        // base / clock rather than appearing as a separate static HUD element.
-        renderCostInfo(pose, buffers, camera, position, Math.max(background, clockScale));
     }
 
-    public static void playRerollBurst(Vec3 position) {
-        // Trigger the same short hand tap used for normal workstation clicks.
-        // The station aim has already been moved to the clock by the hover handler.
+    /** Trigger the same hand-tap timer used by normal EnchantStation slot clicks. */
+    public static void tapHand() {
         if (HANDS_TAP != null) {
             try {
                 HANDS_TAP.invoke(null);
@@ -665,7 +610,9 @@ public final class EasyMagicRerollHooks {
                 // The reroll itself does not depend on the optional hand animation.
             }
         }
+    }
 
+    public static void playRerollBurst(Vec3 position) {
         if (position != null && ENCHANT_FX_BURST != null) {
             try {
                 ENCHANT_FX_BURST.invoke(null, position, 0.55);

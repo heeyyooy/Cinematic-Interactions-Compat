@@ -97,9 +97,15 @@ public abstract class EnchantStationRerollButtonMixin {
             return;
         }
 
+        Vec3 buttonPosition = this.cinematiccompat$rerollPosition();
+        // Keep the working hand aimed at the token for the press animation.
+        EasyMagicRerollHooks.setAim(this, buttonPosition);
+        this.aimAir = true;
+        EasyMagicRerollHooks.tapHand();
+
         if (EasyMagicRerollHooks.clickReroll()) {
             this.cinematiccompat$rerollFlashAt = EasyMagicRerollHooks.clock();
-            EasyMagicRerollHooks.playRerollBurst(this.cinematiccompat$rerollPosition());
+            EasyMagicRerollHooks.playRerollBurst(buttonPosition);
             LocalPlayer player = Minecraft.getInstance().player;
             if (player != null) {
                 player.playSound(SoundEvents.AMETHYST_BLOCK_RESONATE, 0.85f, 1.15f);
@@ -118,10 +124,7 @@ public abstract class EnchantStationRerollButtonMixin {
             return;
         }
 
-        cir.setReturnValue(Component.translatable(
-                EasyMagicRerollHooks.canReroll()
-                        ? "cinematiccompat.hint.reroll"
-                        : "cinematiccompat.hint.reroll_unavailable"));
+        cir.setReturnValue(EasyMagicRerollHooks.rerollHint());
     }
 
     @Inject(method = "renderScene", at = @At("TAIL"), remap = false)
