@@ -38,7 +38,6 @@ public final class EasyMagicRerollHooks {
     private static final Field ENCHANT_FX_GLOW;
     private static final Class<?> CIRCLE_PALETTE;
     private static final Method SCENE_CLOCK;
-    private static final Method HANDS_TAP;
 
     private static final Field EASY_MAGIC_CONFIG;
     private static final Method EASY_MAGIC_CONFIG_GET;
@@ -64,7 +63,6 @@ public final class EasyMagicRerollHooks {
         Field enchantFxGlow = null;
         Class<?> circlePalette = null;
         Method sceneClock = null;
-        Method handsTap = null;
 
         Field easyMagicConfig = null;
         Method easyMagicConfigGet = null;
@@ -136,13 +134,15 @@ public final class EasyMagicRerollHooks {
             enchantFxBurst = enchantFx.getMethod("burst", Vec3.class, double.class);
             enchantFxGlow = enchantFx.getField("GLOW");
 
-            Class<?> sceneClass = Class.forName("dev.dyslexic.cinematic.client.Scene", false, loader);
-            sceneClock = sceneClass.getMethod("clock");
-
-            Class<?> handsClass = Class.forName("dev.dyslexic.cinematic.client.Hands", false, loader);
-            handsTap = handsClass.getMethod("tap");
         } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
             // Physical item and rune effects are optional decoration.
+        }
+
+        try {
+            Class<?> sceneClass = Class.forName("dev.dyslexic.cinematic.client.Scene", false, loader);
+            sceneClock = sceneClass.getMethod("clock");
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
+            // The local player tick count is used as a fallback for animation timing.
         }
 
         try {
@@ -170,7 +170,6 @@ public final class EasyMagicRerollHooks {
         ENCHANT_FX_GLOW = enchantFxGlow;
         CIRCLE_PALETTE = circlePalette;
         SCENE_CLOCK = sceneClock;
-        HANDS_TAP = handsTap;
         EASY_MAGIC_CONFIG = easyMagicConfig;
         EASY_MAGIC_CONFIG_GET = easyMagicConfigGet;
         REROLL_ENABLED = rerollEnabled;
@@ -392,13 +391,6 @@ public final class EasyMagicRerollHooks {
                 ENCHANT_FX_BURST.invoke(null, position, 0.55);
             } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
                 // Sound and the actual reroll action do not depend on particles.
-            }
-        }
-        if (HANDS_TAP != null) {
-            try {
-                HANDS_TAP.invoke(null);
-            } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
-                // The action still works if the hand animation API changes.
             }
         }
     }

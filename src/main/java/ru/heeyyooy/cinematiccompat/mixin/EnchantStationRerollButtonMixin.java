@@ -7,6 +7,7 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.phys.Vec3;
@@ -39,12 +40,11 @@ public abstract class EnchantStationRerollButtonMixin {
 
     @Unique
     private Vec3 cinematiccompat$rerollPosition() {
-        Vec3 lapis = this.corner();
-        return new Vec3(
-                this.top.x * 2.0 - lapis.x,
-                lapis.y,
-                this.top.z * 2.0 - lapis.z
-        );
+        Direction side = EasyMagicRerollHooks.stationSide(this);
+        Vec3 right = Vec3.atLowerCornerOf(side.getOpposite().getClockWise().getNormal());
+        Vec3 offset = this.corner().subtract(this.top);
+        // Mirror only the left/right component; preserve player distance and height.
+        return this.top.add(offset).subtract(right.scale(2.0 * offset.dot(right)));
     }
 
     @Inject(method = "updateCursor", at = @At("HEAD"), remap = false)
