@@ -342,6 +342,10 @@ public final class EasyMagicRerollHooks {
         }
     }
 
+    public static boolean isSceneOutro() {
+        return "OUTRO".equals(scenePhase());
+    }
+
     private static double introProgress() {
         if (SCENE_INTRO_PROGRESS == null) {
             return 1.0;

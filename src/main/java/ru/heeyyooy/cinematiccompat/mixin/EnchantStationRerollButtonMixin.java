@@ -39,12 +39,26 @@ public abstract class EnchantStationRerollButtonMixin {
     private double cinematiccompat$rerollFlashAt = -10.0;
 
     @Unique
+    private boolean cinematiccompat$rerollVisibleAtExit;
+
+    @Unique
+    private boolean cinematiccompat$rerollAffordableAtExit;
+
+    @Unique
     private Vec3 cinematiccompat$rerollPosition() {
         Direction side = EasyMagicRerollHooks.stationSide(this);
         Vec3 right = Vec3.atLowerCornerOf(side.getOpposite().getClockWise().getNormal());
         Vec3 offset = this.corner().subtract(this.top);
         // Mirror only the left/right component; preserve player distance and height.
         return this.top.add(offset).subtract(right.scale(2.0 * offset.dot(right)));
+    }
+
+    @Inject(method = "onEnd", at = @At("HEAD"), remap = false)
+    private void cinematiccompat$rememberRerollForOutro(CallbackInfo ci) {
+        // EnchantStation.onEnd switches the local player back to inventoryMenu.
+        // Cache the button state before that happens so its exit animation can finish.
+        this.cinematiccompat$rerollVisibleAtExit = EasyMagicRerollHooks.isButtonVisible();
+        this.cinematiccompat$rerollAffordableAtExit = EasyMagicRerollHooks.canReroll();
     }
 
     @Inject(method = "updateCursor", at = @At("HEAD"), remap = false)
@@ -119,10 +133,15 @@ public abstract class EnchantStationRerollButtonMixin {
             Camera camera,
             int light,
             CallbackInfo ci) {
-        if (!EasyMagicRerollHooks.isButtonVisible()) {
+        boolean menuButtonVisible = EasyMagicRerollHooks.isButtonVisible();
+        boolean fadingOut = EasyMagicRerollHooks.isSceneOutro() && this.cinematiccompat$rerollVisibleAtExit;
+        if (!menuButtonVisible && !fadingOut) {
             return;
         }
 
+        boolean affordable = menuButtonVisible
+                ? EasyMagicRerollHooks.canReroll()
+                : this.cinematiccompat$rerollAffordableAtExit;
         double flashAge = EasyMagicRerollHooks.clock() - this.cinematiccompat$rerollFlashAt;
         EasyMagicRerollHooks.renderButton(
                 pose,
@@ -131,7 +150,7 @@ public abstract class EnchantStationRerollButtonMixin {
                 this.cinematiccompat$rerollPosition(),
                 EasyMagicRerollHooks.stationSide(this),
                 this.cinematiccompat$hoveringReroll,
-                EasyMagicRerollHooks.canReroll(),
+                affordable,
                 flashAge,
                 light
         );
