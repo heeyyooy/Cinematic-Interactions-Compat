@@ -55,9 +55,8 @@ public final class CinematicCompatClientHooks {
             timeField = sceneClass.getField("time");
             stationKindMethod = stationClass.getMethod("kind");
             stationSideMethod = stationClass.getMethod("sideDirection");
-
-            anvilDrawContentsMethod = anvilStationClass.getDeclaredMethod(
-                    "drawContents",
+            anvilDrawContentsMethod = anvilStationClass.getMethod(
+                    "cinematiccompat$drawContents",
                     PoseStack.class,
                     MultiBufferSource.class,
                     Vec3.class,
@@ -66,7 +65,6 @@ public final class CinematicCompatClientHooks {
                     List.class,
                     int.class
             );
-            anvilDrawContentsMethod.setAccessible(true);
         } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
             // The optional Cinematic Interactions integration is simply inactive when unavailable.
         }
