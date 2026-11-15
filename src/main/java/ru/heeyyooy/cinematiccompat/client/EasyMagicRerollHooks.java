@@ -39,6 +39,7 @@ public final class EasyMagicRerollHooks {
     private static final Method ENCHANT_FX_BILLBOARD;
     private static final Method ENCHANT_FX_SPARKLE;
     private static final Method ENCHANT_FX_BURST;
+    private static final Method HANDS_TAP;
     private static final Field ENCHANT_FX_GLOW;
     private static final Class<?> CIRCLE_PALETTE;
     private static final Method SCENE_CLOCK;
@@ -67,6 +68,7 @@ public final class EasyMagicRerollHooks {
         Method enchantFxBillboard = null;
         Method enchantFxSparkle = null;
         Method enchantFxBurst = null;
+        Method handsTap = null;
         Field enchantFxGlow = null;
         Class<?> circlePalette = null;
         Method sceneClock = null;
@@ -149,6 +151,15 @@ public final class EasyMagicRerollHooks {
         }
 
         try {
+            // The method is package-private in Cinematic Interactions. The companion
+            // Mixin invoker exposes it as a public static bridge on Hands.
+            Class<?> handsClass = Class.forName("dev.dyslexic.cinematic.client.Hands", false, loader);
+            handsTap = handsClass.getMethod("cinematiccompat$tap");
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
+            // The physical button still works if the optional hand-animation bridge is unavailable.
+        }
+
+        try {
             Class<?> sceneClass = Class.forName("dev.dyslexic.cinematic.client.Scene", false, loader);
             sceneClock = sceneClass.getMethod("clock");
             scenePhase = sceneClass.getField("phase");
@@ -180,6 +191,7 @@ public final class EasyMagicRerollHooks {
         ENCHANT_FX_BILLBOARD = enchantFxBillboard;
         ENCHANT_FX_SPARKLE = enchantFxSparkle;
         ENCHANT_FX_BURST = enchantFxBurst;
+        HANDS_TAP = handsTap;
         ENCHANT_FX_GLOW = enchantFxGlow;
         CIRCLE_PALETTE = circlePalette;
         SCENE_CLOCK = sceneClock;
@@ -482,11 +494,21 @@ public final class EasyMagicRerollHooks {
     }
 
     public static void playRerollBurst(Vec3 position) {
+        // Trigger the same short hand tap used for normal workstation clicks.
+        // The station aim has already been moved to the clock by the hover handler.
+        if (HANDS_TAP != null) {
+            try {
+                HANDS_TAP.invoke(null);
+            } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
+                // The reroll itself does not depend on the optional hand animation.
+            }
+        }
+
         if (position != null && ENCHANT_FX_BURST != null) {
             try {
                 ENCHANT_FX_BURST.invoke(null, position, 0.55);
             } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
-                // Sound and the actual reroll action do not depend on particles.
+                // The actual reroll action does not depend on particles.
             }
         }
     }
