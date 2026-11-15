@@ -74,6 +74,7 @@ public abstract class EnchantStationRerollButtonMixin {
             return;
         }
 
+        // This surface is a button, not the lapis or item input slot.
         ci.cancel();
         if (button != 0) {
             return;
@@ -84,7 +85,7 @@ public abstract class EnchantStationRerollButtonMixin {
             EasyMagicRerollHooks.playRerollBurst(this.cinematiccompat$rerollPosition());
             LocalPlayer player = Minecraft.getInstance().player;
             if (player != null) {
-                player.playSound(SoundEvents.ENCHANTMENT_TABLE_USE, 0.85f, 1.15f);
+                player.playSound(SoundEvents.AMETHYST_BLOCK_RESONATE, 0.85f, 1.15f);
             }
         } else {
             LocalPlayer player = Minecraft.getInstance().player;
@@ -123,6 +124,7 @@ public abstract class EnchantStationRerollButtonMixin {
                 buffers,
                 camera,
                 this.cinematiccompat$rerollPosition(),
+                EasyMagicRerollHooks.stationSide(this),
                 this.cinematiccompat$hoveringReroll,
                 EasyMagicRerollHooks.canReroll(),
                 flashAge,

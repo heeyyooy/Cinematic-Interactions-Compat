@@ -17,8 +17,8 @@ import java.lang.reflect.Method;
 
 /**
  * Optional Easy Magic bridge for the enchanting-scene reroll button.
- * All Easy Magic and Cinematic Interactions implementation references are
- * resolved by name so the addon can still load without those client classes.
+ * All implementation references are resolved by name so this addon still
+ * loads when Easy Magic is not installed.
  */
 public final class EasyMagicRerollHooks {
     private static final Class<?> MENU_CLASS;
@@ -28,6 +28,7 @@ public final class EasyMagicRerollHooks {
     private static final Method PICKING_MOUSE_GUI;
     private static final Method PICKING_TO_GUI;
     private static final Field STATION_AIM;
+    private static final Method STATION_SIDE;
 
     private static final Method ITEM_PLACER_RENDER;
     private static final Method ENCHANT_FX_CIRCLE;
@@ -36,16 +37,25 @@ public final class EasyMagicRerollHooks {
     private static final Method ENCHANT_FX_BURST;
     private static final Field ENCHANT_FX_GLOW;
     private static final Class<?> CIRCLE_PALETTE;
-
     private static final Method SCENE_CLOCK;
+    private static final Method HANDS_TAP;
+
+    private static final Field EASY_MAGIC_CONFIG;
+    private static final Method EASY_MAGIC_CONFIG_GET;
+    private static final Field REROLL_ENABLED;
 
     static {
+        ClassLoader loader = EasyMagicRerollHooks.class.getClassLoader();
+
         Class<?> menuClass = null;
         Method canEnchantItem = null;
         Method canUseReroll = null;
+
         Method mouseGui = null;
         Method toGui = null;
         Field stationAim = null;
+        Method stationSide = null;
+
         Method itemPlacerRender = null;
         Method enchantFxCircle = null;
         Method enchantFxBillboard = null;
@@ -54,8 +64,12 @@ public final class EasyMagicRerollHooks {
         Field enchantFxGlow = null;
         Class<?> circlePalette = null;
         Method sceneClock = null;
+        Method handsTap = null;
 
-        ClassLoader loader = EasyMagicRerollHooks.class.getClassLoader();
+        Field easyMagicConfig = null;
+        Method easyMagicConfigGet = null;
+        Field rerollEnabled = null;
+
         try {
             menuClass = Class.forName("fuzs.easymagic.world.inventory.ModEnchantmentMenu", false, loader);
             canEnchantItem = menuClass.getMethod("canEnchantItem");
@@ -70,8 +84,9 @@ public final class EasyMagicRerollHooks {
             mouseGui = pickingClass.getMethod("mouseGui");
             toGui = pickingClass.getMethod("toGui", Vec3.class);
             stationAim = stationClass.getField("aim");
+            stationSide = stationClass.getMethod("sideDirection");
         } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
-            // Cursor and hand integration will be disabled if Picking is unavailable.
+            // Cursor/hand integration is disabled if the Cinematic API changes.
         }
 
         try {
@@ -120,15 +135,24 @@ public final class EasyMagicRerollHooks {
             enchantFxSparkle = enchantFx.getMethod("sparkle", Vec3.class, double.class);
             enchantFxBurst = enchantFx.getMethod("burst", Vec3.class, double.class);
             enchantFxGlow = enchantFx.getField("GLOW");
+
+            Class<?> sceneClass = Class.forName("dev.dyslexic.cinematic.client.Scene", false, loader);
+            sceneClock = sceneClass.getMethod("clock");
+
+            Class<?> handsClass = Class.forName("dev.dyslexic.cinematic.client.Hands", false, loader);
+            handsTap = handsClass.getMethod("tap");
         } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
-            // The item layer remains usable even if an optional decoration method changes.
+            // Physical item and rune effects are optional decoration.
         }
 
         try {
-            Class<?> sceneClass = Class.forName("dev.dyslexic.cinematic.client.Scene", false, loader);
-            sceneClock = sceneClass.getMethod("clock");
+            Class<?> easyMagicClass = Class.forName("fuzs.easymagic.EasyMagic", false, loader);
+            Class<?> serverConfigClass = Class.forName("fuzs.easymagic.config.ServerConfig", false, loader);
+            easyMagicConfig = easyMagicClass.getField("CONFIG");
+            easyMagicConfigGet = easyMagicConfig.getType().getMethod("get", Class.class);
+            rerollEnabled = serverConfigClass.getField("rerollEnchantments");
         } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
-            // The local player tick count is used as a fallback for animation timing.
+            // If Easy Magic's config API changes, menu validation remains the final authority.
         }
 
         MENU_CLASS = menuClass;
@@ -137,6 +161,7 @@ public final class EasyMagicRerollHooks {
         PICKING_MOUSE_GUI = mouseGui;
         PICKING_TO_GUI = toGui;
         STATION_AIM = stationAim;
+        STATION_SIDE = stationSide;
         ITEM_PLACER_RENDER = itemPlacerRender;
         ENCHANT_FX_CIRCLE = enchantFxCircle;
         ENCHANT_FX_BILLBOARD = enchantFxBillboard;
@@ -145,6 +170,10 @@ public final class EasyMagicRerollHooks {
         ENCHANT_FX_GLOW = enchantFxGlow;
         CIRCLE_PALETTE = circlePalette;
         SCENE_CLOCK = sceneClock;
+        HANDS_TAP = handsTap;
+        EASY_MAGIC_CONFIG = easyMagicConfig;
+        EASY_MAGIC_CONFIG_GET = easyMagicConfigGet;
+        REROLL_ENABLED = rerollEnabled;
     }
 
     private EasyMagicRerollHooks() {
@@ -161,7 +190,7 @@ public final class EasyMagicRerollHooks {
     /** Same visibility rule as Easy Magic's RerollButton.tick(). */
     public static boolean isButtonVisible() {
         Object menu = menu();
-        if (menu == null || CAN_ENCHANT_ITEM == null) {
+        if (menu == null || CAN_ENCHANT_ITEM == null || !isRerollEnabled()) {
             return false;
         }
         try {
@@ -175,7 +204,7 @@ public final class EasyMagicRerollHooks {
     public static boolean canReroll() {
         Object menu = menu();
         LocalPlayer player = Minecraft.getInstance().player;
-        if (menu == null || player == null || CAN_USE_REROLL == null) {
+        if (menu == null || player == null || CAN_USE_REROLL == null || !isRerollEnabled()) {
             return false;
         }
         try {
@@ -185,8 +214,23 @@ public final class EasyMagicRerollHooks {
         }
     }
 
+    private static boolean isRerollEnabled() {
+        if (EASY_MAGIC_CONFIG == null || EASY_MAGIC_CONFIG_GET == null || REROLL_ENABLED == null) {
+            // If configuration introspection is unavailable, let the menu's
+            // own clickMenuButton implementation accept or reject the action.
+            return true;
+        }
+        try {
+            Object holder = EASY_MAGIC_CONFIG.get(null);
+            Object config = EASY_MAGIC_CONFIG_GET.invoke(holder, REROLL_ENABLED.getDeclaringClass());
+            return Boolean.TRUE.equals(REROLL_ENABLED.get(config));
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
+            return false;
+        }
+    }
+
     /**
-     * Mirrors ModEnchantmentScreen's callback. The mod validates the action,
+     * Mirrors ModEnchantmentScreen's callback. Easy Magic validates the action,
      * applies its configured XP/catalyst costs and refreshes its own clues.
      */
     public static boolean clickReroll() {
@@ -196,11 +240,9 @@ public final class EasyMagicRerollHooks {
                 || !(player.containerMenu instanceof EnchantmentMenu menu)) {
             return false;
         }
-
         if (!menu.clickMenuButton(player, 4)) {
             return false;
         }
-
         mc.gameMode.handleInventoryButtonClick(menu.containerId, 4);
         return true;
     }
@@ -216,7 +258,6 @@ public final class EasyMagicRerollHooks {
             if (mouse == null || center == null || edge == null) {
                 return false;
             }
-
             double radius = Math.max(8.0, Math.hypot(center[0] - edge[0], center[1] - edge[1]));
             return Math.hypot(mouse[0] - center[0], mouse[1] - center[1]) <= radius;
         } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
@@ -242,7 +283,19 @@ public final class EasyMagicRerollHooks {
         try {
             STATION_AIM.set(station, aim);
         } catch (IllegalAccessException | RuntimeException ignored) {
-            // Reroll remains clickable even if the hand aim cannot be moved.
+            // The click remains usable if only the hand-aim bridge changes.
+        }
+    }
+
+    public static Direction stationSide(Object station) {
+        if (station == null || STATION_SIDE == null) {
+            return Direction.NORTH;
+        }
+        try {
+            Object value = STATION_SIDE.invoke(station);
+            return value instanceof Direction direction ? direction : Direction.NORTH;
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
+            return Direction.NORTH;
         }
     }
 
@@ -262,14 +315,15 @@ public final class EasyMagicRerollHooks {
     }
 
     /**
-     * A small physical reroll token: a dropped clock model, surrounded by the
-     * same pixel-rune and glow effects used by the enchantment offers.
+     * A physical reroll token: a dropped clock model, surrounded by the same
+     * pixel-rune and glow effects used by the enchanting offers.
      */
     public static void renderButton(
             PoseStack pose,
             MultiBufferSource buffers,
             Camera camera,
             Vec3 position,
+            Direction facing,
             boolean hovered,
             boolean affordable,
             double flashAge,
@@ -295,7 +349,7 @@ public final class EasyMagicRerollHooks {
                 affordable ? 0.20f : 0.08f, affordable ? 0.95f : 0.22f,
                 brightness * (hovered ? 0.95f : 0.58f));
 
-        // Clock's gold dial makes the central object read as a physical button.
+        // The gold clock dial reads as a physical reroll token.
         if (ITEM_PLACER_RENDER != null) {
             try {
                 ITEM_PLACER_RENDER.invoke(
@@ -305,14 +359,14 @@ public final class EasyMagicRerollHooks {
                         cameraPos,
                         new ItemStack(Items.CLOCK),
                         position.add(0.0, 0.009, 0.0),
-                        Direction.NORTH,
+                        facing == null ? Direction.NORTH : facing,
                         0x5245524F4C4CL,
                         0.78f * scale,
                         0.0f,
                         light
                 );
             } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
-                // The rune and glow remain visible if the item renderer bridge changes.
+                // Rune and glow remain visible if the optional item-model bridge changes.
             }
         }
 
@@ -340,14 +394,12 @@ public final class EasyMagicRerollHooks {
                 // Sound and the actual reroll action do not depend on particles.
             }
         }
-        try {
-            Class<?> handsClass = Class.forName(
-                    "dev.dyslexic.cinematic.client.Hands",
-                    false,
-                    EasyMagicRerollHooks.class.getClassLoader());
-            handsClass.getMethod("tap").invoke(null);
-        } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
-            // The action still works if the optional hand animation API changes.
+        if (HANDS_TAP != null) {
+            try {
+                HANDS_TAP.invoke(null);
+            } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
+                // The action still works if the hand animation API changes.
+            }
         }
     }
 
@@ -371,8 +423,14 @@ public final class EasyMagicRerollHooks {
     }
 
     private static void drawCircle(
-            PoseStack pose, MultiBufferSource buffers, Vec3 camera, Vec3 center,
-            double radius, double angle, Object palette, float brightness) {
+            PoseStack pose,
+            MultiBufferSource buffers,
+            Vec3 camera,
+            Vec3 center,
+            double radius,
+            double angle,
+            Object palette,
+            float brightness) {
         if (ENCHANT_FX_CIRCLE == null || palette == null) {
             return;
         }
@@ -385,8 +443,15 @@ public final class EasyMagicRerollHooks {
     }
 
     private static void drawGlow(
-            PoseStack pose, MultiBufferSource buffers, Camera camera, Vec3 center, double radius,
-            float red, float green, float blue, float brightness) {
+            PoseStack pose,
+            MultiBufferSource buffers,
+            Camera camera,
+            Vec3 center,
+            double radius,
+            float red,
+            float green,
+            float blue,
+            float brightness) {
         if (ENCHANT_FX_BILLBOARD == null || ENCHANT_FX_GLOW == null) {
             return;
         }
