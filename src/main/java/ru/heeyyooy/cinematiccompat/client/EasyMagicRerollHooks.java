@@ -23,6 +23,7 @@ import java.lang.reflect.Method;
  * loads when Easy Magic is not installed.
  */
 public final class EasyMagicRerollHooks {
+    private static volatile boolean handTapRequested;
     private static final double VIOLET_SOCKET_RADIUS = 0.10;
     private static final double BLUE_PERIMETER_RADIUS = 0.115;
     private static final double SOCKET_CIRCLE_LIFT = 0.016;
@@ -44,7 +45,6 @@ public final class EasyMagicRerollHooks {
     private static final Method ENCHANT_FX_BILLBOARD;
     private static final Method ENCHANT_FX_SPARKLE;
     private static final Method ENCHANT_FX_BURST;
-    private static final Method HANDS_TAP;
     private static final Field ENCHANT_FX_GLOW;
     private static final Class<?> CIRCLE_PALETTE;
     private static final Method SCENE_CLOCK;
@@ -79,7 +79,6 @@ public final class EasyMagicRerollHooks {
         Method enchantFxBillboard = null;
         Method enchantFxSparkle = null;
         Method enchantFxBurst = null;
-        Method handsTap = null;
         Field enchantFxGlow = null;
         Class<?> circlePalette = null;
         Method sceneClock = null;
@@ -178,15 +177,6 @@ public final class EasyMagicRerollHooks {
         }
 
         try {
-            // The method is package-private in Cinematic Interactions. The companion
-            // Mixin invoker exposes it as a public static bridge on Hands.
-            Class<?> handsClass = Class.forName("dev.dyslexic.cinematic.client.Hands", false, loader);
-            handsTap = handsClass.getMethod("cinematiccompat$tap");
-        } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
-            // The physical button still works if the optional hand-animation bridge is unavailable.
-        }
-
-        try {
             Class<?> sceneClass = Class.forName("dev.dyslexic.cinematic.client.Scene", false, loader);
             sceneClock = sceneClass.getMethod("clock");
             scenePhase = sceneClass.getField("phase");
@@ -224,7 +214,6 @@ public final class EasyMagicRerollHooks {
         ENCHANT_FX_BILLBOARD = enchantFxBillboard;
         ENCHANT_FX_SPARKLE = enchantFxSparkle;
         ENCHANT_FX_BURST = enchantFxBurst;
-        HANDS_TAP = handsTap;
         ENCHANT_FX_GLOW = enchantFxGlow;
         CIRCLE_PALETTE = circlePalette;
         SCENE_CLOCK = sceneClock;
@@ -670,15 +659,20 @@ public final class EasyMagicRerollHooks {
         }
     }
 
-    /** Trigger the same hand-tap timer used by normal EnchantStation slot clicks. */
+    /**
+     * Queue the regular hand-tap animation. HandsTapRequestMixin consumes this
+     * from Hands.follow() and updates the same tapAt timer as Hands.tap().
+     */
     public static void tapHand() {
-        if (HANDS_TAP != null) {
-            try {
-                HANDS_TAP.invoke(null);
-            } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
-                // The reroll itself does not depend on the optional hand animation.
-            }
+        handTapRequested = true;
+    }
+
+    public static boolean consumeHandTapRequest() {
+        if (!handTapRequested) {
+            return false;
         }
+        handTapRequested = false;
+        return true;
     }
 
     public static void playRerollBurst(Vec3 position) {

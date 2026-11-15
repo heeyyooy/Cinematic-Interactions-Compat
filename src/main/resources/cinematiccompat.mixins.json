@@ -15,7 +15,7 @@
     "EasyAnvilsRendererMixin",
     "AnvilStationOutroMixin",
     "EnchantStationRerollButtonMixin",
-    "HandsTapInvokerMixin"
+    "HandsTapRequestMixin"
   ],
   "injectors": {
     "defaultRequire": 1
