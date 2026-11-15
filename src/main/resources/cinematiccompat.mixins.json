@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "ru.heeyyooy.cinematiccompat.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "StationKindCompatMixin",
+    "TableGridCompatMixin",
+    "MenuActionsLecternDataMixin",
+    "AmendmentsLecternEntityMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
