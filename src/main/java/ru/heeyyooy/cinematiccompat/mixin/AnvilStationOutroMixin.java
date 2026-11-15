@@ -35,10 +35,6 @@ public abstract class AnvilStationOutroMixin {
     @Unique
     private ItemStack cinematiccompat$additionAtExit = ItemStack.EMPTY;
 
-    /**
-     * Capture the real menu inputs before MenuStation.onEnd closes the local
-     * menu. This snapshot is then used for every outro frame.
-     */
     @Inject(method = "onEnd", at = @At("HEAD"), remap = false)
     private void cinematiccompat$captureAnvilInputsBeforeClose(CallbackInfo ci) {
         Minecraft mc = Minecraft.getInstance();
@@ -53,12 +49,8 @@ public abstract class AnvilStationOutroMixin {
         this.cinematiccompat$additionAtExit = mc.player.containerMenu.getSlot(1).getItem().copy();
     }
 
-    /**
-     * Use the same private static drawContents implementation as the active
-     * AnvilStation scene; this preserves exact position, orientation and size.
-     */
     @Invoker(value = "drawContents", remap = false)
-    protected static void cinematiccompat$drawContentsForOutro(
+    public static void cinematiccompat$drawContentsForOutro(
             PoseStack pose,
             MultiBufferSource buffers,
             Vec3 camera,
@@ -69,10 +61,6 @@ public abstract class AnvilStationOutroMixin {
         throw new AssertionError("Mixin invoker was not applied");
     }
 
-    /**
-     * Intercept the concrete AnvilStation scene render before it can call the
-     * generic drawLeaving animation. The item pile is now drawn in place.
-     */
     @Inject(method = "renderScene", at = @At("HEAD"), cancellable = true, remap = false)
     private void cinematiccompat$renderAnvilPileInsteadOfInventoryFlight(
             PoseStack pose,

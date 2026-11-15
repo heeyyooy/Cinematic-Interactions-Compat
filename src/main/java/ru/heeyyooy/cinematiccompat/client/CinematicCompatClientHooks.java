@@ -54,10 +54,9 @@ public final class CinematicCompatClientHooks {
             timeField = sceneClass.getField("time");
             stationKindMethod = stationClass.getMethod("kind");
             stationSideMethod = stationClass.getMethod("sideDirection");
-
-            // Added by AnvilStationOutroMixin's @Invoker. Use getDeclaredMethod
-            // because the merged invoker deliberately has protected visibility.
-            anvilDrawContentsMethod = anvilStationClass.getDeclaredMethod(
+            // Public @Invoker added by AnvilStationOutroMixin. A public method
+            // avoids setAccessible and works with NeoForge's module boundaries.
+            anvilDrawContentsMethod = anvilStationClass.getMethod(
                     "cinematiccompat$drawContentsForOutro",
                     PoseStack.class,
                     MultiBufferSource.class,
@@ -67,7 +66,6 @@ public final class CinematicCompatClientHooks {
                     List.class,
                     int.class
             );
-            anvilDrawContentsMethod.setAccessible(true);
         } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
             // The optional Cinematic Interactions integration is inactive if its API is unavailable.
         }
