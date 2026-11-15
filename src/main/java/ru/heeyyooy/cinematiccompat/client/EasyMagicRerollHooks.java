@@ -21,6 +21,8 @@ import java.lang.reflect.Method;
  * loads when Easy Magic is not installed.
  */
 public final class EasyMagicRerollHooks {
+    private static final double RUNE_BACKGROUND_SCALE = 0.30;
+    private static final float CLOCK_MODEL_SCALE = 0.713f;
     private static final Class<?> MENU_CLASS;
     private static final Method CAN_ENCHANT_ITEM;
     private static final Method CAN_USE_REROLL;
@@ -421,11 +423,13 @@ public final class EasyMagicRerollHooks {
         if (background > 0.005f) {
             float brightness = baseBrightness * background;
             drawCircle(pose, buffers, cameraPos, center,
-                    0.132 * hoverScale, clock * (hovered ? 0.78 : 0.30), outerPalette, brightness);
-            drawCircle(pose, buffers, cameraPos, center.add(0.0, 0.001, 0.0),
-                    0.078 * hoverScale, -clock * 0.52, innerPalette, brightness * 0.74f);
-            drawGlow(pose, buffers, camera, center.add(0.0, 0.018, 0.0),
-                    0.15 * hoverScale,
+                    0.132 * RUNE_BACKGROUND_SCALE * hoverScale,
+                    clock * (hovered ? 0.78 : 0.30), outerPalette, brightness);
+            drawCircle(pose, buffers, cameraPos, center.add(0.0, 0.001 * RUNE_BACKGROUND_SCALE, 0.0),
+                    0.078 * RUNE_BACKGROUND_SCALE * hoverScale,
+                    -clock * 0.52, innerPalette, brightness * 0.74f);
+            drawGlow(pose, buffers, camera, center.add(0.0, 0.018 * RUNE_BACKGROUND_SCALE, 0.0),
+                    0.15 * RUNE_BACKGROUND_SCALE * hoverScale,
                     0.18f * brightness,
                     0.46f * brightness,
                     0.95f * brightness,
@@ -433,23 +437,27 @@ public final class EasyMagicRerollHooks {
 
             if (flashAge >= 0.0 && flashAge < 0.65) {
                 float flash = (float) (1.0 - flashAge / 0.65) * background;
-                drawCircle(pose, buffers, cameraPos, center.add(0.0, 0.003, 0.0),
-                        0.15 + 0.06 * (1.0 - flash), clock * 1.8, outerPalette, flash * 0.95f);
+                drawCircle(pose, buffers, cameraPos, center.add(0.0, 0.003 * RUNE_BACKGROUND_SCALE, 0.0),
+                        (0.15 + 0.06 * (1.0 - flash)) * RUNE_BACKGROUND_SCALE,
+                        clock * 1.8, outerPalette, flash * 0.95f);
             }
 
             LocalPlayer player = Minecraft.getInstance().player;
             if (background > 0.45f && player != null
                     && player.tickCount % 7 == 0 && ENCHANT_FX_SPARKLE != null) {
                 try {
-                    ENCHANT_FX_SPARKLE.invoke(null, center.add(0.0, 0.025, 0.0), 0.09);
+                    ENCHANT_FX_SPARKLE.invoke(
+                            null,
+                            center.add(0.0, 0.025 * RUNE_BACKGROUND_SCALE, 0.0),
+                            0.09 * RUNE_BACKGROUND_SCALE);
                 } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
                     // Purely decorative.
                 }
             }
         }
 
-        // The gold clock is deliberately smaller than the rune base and has
-        // its own scale animation on entering and leaving the scene.
+        // The gold clock is deliberately more prominent than the reduced rune
+        // base and has its own scale animation on entering and leaving the scene.
         if (clockScale > 0.005f && ITEM_PLACER_RENDER != null) {
             try {
                 ITEM_PLACER_RENDER.invoke(
@@ -461,7 +469,7 @@ public final class EasyMagicRerollHooks {
                         position.add(0.0, 0.009, 0.0),
                         facing == null ? Direction.NORTH : facing,
                         0x5245524F4C4CL,
-                        0.62f * clockScale * hoverScale,
+                        CLOCK_MODEL_SCALE * clockScale * hoverScale,
                         0.0f,
                         light
                 );
