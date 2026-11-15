@@ -25,9 +25,12 @@ import java.lang.reflect.Method;
 public final class EasyMagicRerollHooks {
     private static volatile boolean handTapRequested;
     private static volatile double rerollDeniedAt = -10.0;
-    private static final double VIOLET_SOCKET_RADIUS = 0.10 * 0.20;
-    private static final double BLUE_PERIMETER_RADIUS = 0.115 * 0.15;
-    private static final double BLUE_GLOW_SCALE = 0.15;
+    // Express the requested reductions from the original 100% sizes.
+    private static final double VIOLET_SOCKET_REDUCTION = 0.80;
+    private static final double BLUE_PERIMETER_REDUCTION = 0.85;
+    private static final double VIOLET_SOCKET_RADIUS = 0.10 * (1.0 - VIOLET_SOCKET_REDUCTION);
+    private static final double BLUE_PERIMETER_RADIUS = 0.115 * (1.0 - BLUE_PERIMETER_REDUCTION);
+    private static final double BLUE_GLOW_SCALE = 1.0 - BLUE_PERIMETER_REDUCTION;
     private static final double SOCKET_CIRCLE_LIFT = 0.016;
     private static final double OUTER_CIRCLE_LIFT = 0.012;
     private static final float CLOCK_MODEL_SCALE = 0.713f;
