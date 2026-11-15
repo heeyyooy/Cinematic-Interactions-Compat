@@ -2,10 +2,13 @@ package ru.heeyyooy.cinematiccompat.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Camera;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.EnchantmentMenu;
 import net.minecraft.world.item.ItemStack;
@@ -50,6 +53,10 @@ public final class EasyMagicRerollHooks {
     private static final Field EASY_MAGIC_CONFIG;
     private static final Method EASY_MAGIC_CONFIG_GET;
     private static final Field REROLL_ENABLED;
+    private static final Field REROLL_CATALYST_COST;
+    private static final Field REROLL_EXPERIENCE_COST;
+    private static final Field REROLLING_TAKES_LEVELS;
+    private static final Field DEDICATED_REROLL_CATALYST;
 
     static {
         ClassLoader loader = EasyMagicRerollHooks.class.getClassLoader();
@@ -79,6 +86,10 @@ public final class EasyMagicRerollHooks {
         Field easyMagicConfig = null;
         Method easyMagicConfigGet = null;
         Field rerollEnabled = null;
+        Field rerollCatalystCost = null;
+        Field rerollExperienceCost = null;
+        Field rerollingTakesLevels = null;
+        Field dedicatedRerollCatalyst = null;
 
         try {
             menuClass = Class.forName("fuzs.easymagic.world.inventory.ModEnchantmentMenu", false, loader);
@@ -175,6 +186,10 @@ public final class EasyMagicRerollHooks {
             easyMagicConfig = easyMagicClass.getField("CONFIG");
             easyMagicConfigGet = easyMagicConfig.getType().getMethod("get", Class.class);
             rerollEnabled = serverConfigClass.getField("rerollEnchantments");
+            rerollCatalystCost = serverConfigClass.getField("rerollCatalystCost");
+            rerollExperienceCost = serverConfigClass.getField("rerollExperiencePointsCost");
+            rerollingTakesLevels = serverConfigClass.getField("rerollingTakesEnchantmentLevels");
+            dedicatedRerollCatalyst = serverConfigClass.getField("dedicatedRerollCatalyst");
         } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
             // If Easy Magic's config API changes, menu validation remains the final authority.
         }
@@ -201,6 +216,10 @@ public final class EasyMagicRerollHooks {
         EASY_MAGIC_CONFIG = easyMagicConfig;
         EASY_MAGIC_CONFIG_GET = easyMagicConfigGet;
         REROLL_ENABLED = rerollEnabled;
+        REROLL_CATALYST_COST = rerollCatalystCost;
+        REROLL_EXPERIENCE_COST = rerollExperienceCost;
+        REROLLING_TAKES_LEVELS = rerollingTakesLevels;
+        DEDICATED_REROLL_CATALYST = dedicatedRerollCatalyst;
     }
 
     private EasyMagicRerollHooks() {
@@ -254,6 +273,145 @@ public final class EasyMagicRerollHooks {
         } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
             return false;
         }
+    }
+
+    private static Object serverConfig() {
+        if (EASY_MAGIC_CONFIG == null || EASY_MAGIC_CONFIG_GET == null || REROLL_ENABLED == null) {
+            return null;
+        }
+        try {
+            Object holder = EASY_MAGIC_CONFIG.get(null);
+            return EASY_MAGIC_CONFIG_GET.invoke(holder, REROLL_ENABLED.getDeclaringClass());
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
+            return null;
+        }
+    }
+
+    private static int configInt(Field field) {
+        Object config = serverConfig();
+        if (config == null || field == null) return -1;
+        try {
+            return field.getInt(config);
+        } catch (IllegalAccessException | RuntimeException ignored) {
+            return -1;
+        }
+    }
+
+    private static boolean configBoolean(Field field, boolean fallback) {
+        Object config = serverConfig();
+        if (config == null || field == null) return fallback;
+        try {
+            return field.getBoolean(config);
+        } catch (IllegalAccessException | RuntimeException ignored) {
+            return fallback;
+        }
+    }
+
+    /** Human-readable name of the actual Easy Magic catalyst selected by its server config. */
+    private static String catalystName() {
+        boolean dedicated = configBoolean(DEDICATED_REROLL_CATALYST, false);
+        Object activeMenu = menu();
+        if (dedicated && activeMenu instanceof EnchantmentMenu enchantmentMenu) {
+            try {
+                ItemStack stack = enchantmentMenu.getSlot(2).getItem();
+                if (!stack.isEmpty()) {
+                    return stack.getHoverName().getString();
+                }
+            } catch (RuntimeException ignored) {
+                // A custom dedicated catalyst may not currently occupy its slot.
+            }
+            return Component.translatable("cinematiccompat.reroll.cost.generic_catalyst").getString();
+        }
+        return new ItemStack(Items.LAPIS_LAZULI).getHoverName().getString();
+    }
+
+    /**
+     * Displays the actual configured costs directly above the physical clock.
+     * XP points and enchantment levels are distinguished because Easy Magic
+     * exposes those as separate cost modes.
+     */
+    private static void renderCostInfo(
+            PoseStack pose,
+            MultiBufferSource buffers,
+            Camera camera,
+            Vec3 position,
+            float presence) {
+        if (presence <= 0.01f) return;
+
+        int catalystCost = configInt(REROLL_CATALYST_COST);
+        int experienceCost = configInt(REROLL_EXPERIENCE_COST);
+        if (catalystCost < 0 || experienceCost < 0) return;
+
+        boolean takesLevels = configBoolean(REROLLING_TAKES_LEVELS, false);
+        String catalystLine = catalystCost > 0
+                ? Component.translatable(
+                        "cinematiccompat.reroll.cost.catalyst",
+                        catalystName(),
+                        catalystCost).getString()
+                : null;
+        String experienceLine = experienceCost > 0
+                ? Component.translatable(
+                        takesLevels
+                                ? "cinematiccompat.reroll.cost.levels"
+                                : "cinematiccompat.reroll.cost.experience",
+                        experienceCost).getString()
+                : null;
+
+        if (catalystLine == null && experienceLine == null) {
+            catalystLine = Component.translatable("cinematiccompat.reroll.cost.free").getString();
+        }
+
+        Font font = Minecraft.getInstance().font;
+        Vec3 cameraPos = camera.getPosition();
+        Vec3 labelPos = position.add(0.0, 0.205, 0.0);
+        int alpha = Math.max(0, Math.min(255, Math.round(235 * presence)));
+        pose.pushPose();
+        pose.translate(labelPos.x - cameraPos.x, labelPos.y - cameraPos.y, labelPos.z - cameraPos.z);
+        pose.mulPose(camera.rotation());
+        pose.scale(0.0042f, -0.0042f, 0.0042f);
+
+        if (catalystLine != null && experienceLine != null) {
+            font.drawInBatch(
+                    catalystLine,
+                    -font.width(catalystLine) / 2.0f,
+                    -9.0f,
+                    (alpha << 24) | 0x9CC8FF,
+                    true,
+                    pose.last().pose(),
+                    buffers,
+                    Font.DisplayMode.NORMAL,
+                    0,
+                    LightTexture.FULL_BRIGHT
+            );
+            font.drawInBatch(
+                    experienceLine,
+                    -font.width(experienceLine) / 2.0f,
+                    2.0f,
+                    (alpha << 24) | (takesLevels ? 0xFFD58A : 0xA5E6A7),
+                    true,
+                    pose.last().pose(),
+                    buffers,
+                    Font.DisplayMode.NORMAL,
+                    0,
+                    LightTexture.FULL_BRIGHT
+            );
+        } else {
+            String line = catalystLine != null ? catalystLine : experienceLine;
+            int color = catalystLine != null ? 0x9CC8FF : (takesLevels ? 0xFFD58A : 0xA5E6A7);
+            font.drawInBatch(
+                    line,
+                    -font.width(line) / 2.0f,
+                    -4.5f,
+                    (alpha << 24) | color,
+                    true,
+                    pose.last().pose(),
+                    buffers,
+                    Font.DisplayMode.NORMAL,
+                    0,
+                    LightTexture.FULL_BRIGHT
+            );
+        }
+        pose.popPose();
     }
 
     /**
@@ -491,6 +649,10 @@ public final class EasyMagicRerollHooks {
                 // Rune and glow remain visible if the optional item-model bridge changes.
             }
         }
+
+        // Keep the cost label attached to the clock and let it fade with the rune
+        // base / clock rather than appearing as a separate static HUD element.
+        renderCostInfo(pose, buffers, camera, position, Math.max(background, clockScale));
     }
 
     public static void playRerollBurst(Vec3 position) {
