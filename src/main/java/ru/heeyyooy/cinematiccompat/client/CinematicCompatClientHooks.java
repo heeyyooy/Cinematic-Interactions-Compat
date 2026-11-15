@@ -14,18 +14,16 @@ import java.util.List;
 /**
  * Accesses the current Cinematic Interactions scene without making its client
  * implementation a compile-time dependency of this compatibility addon.
- *
- * This class deliberately lives outside the mixin package: Mixin reserves that
- * package for mixin classes and rejects ordinary classes loaded from it.
+ * This class intentionally lives outside the reserved mixin package.
  */
 public final class CinematicCompatClientHooks {
     private static final Method ACTIVE_METHOD;
     private static final Field STATION_FIELD;
     private static final Field STATION_POS_FIELD;
-    private static final Field STATION_SIDE_FIELD;
     private static final Field PHASE_FIELD;
     private static final Field TIME_FIELD;
     private static final Method STATION_KIND_METHOD;
+    private static final Method STATION_SIDE_METHOD;
     private static final Method ANVIL_DRAW_CONTENTS_METHOD;
     private static final Method EASY_ANVILS_CONFIG_GET_METHOD;
     private static final Field EASY_ANVILS_CONFIG_FIELD;
@@ -35,10 +33,10 @@ public final class CinematicCompatClientHooks {
         Method activeMethod = null;
         Field stationField = null;
         Field stationPosField = null;
-        Field stationSideField = null;
         Field phaseField = null;
         Field timeField = null;
         Method stationKindMethod = null;
+        Method stationSideMethod = null;
         Method anvilDrawContentsMethod = null;
         Method easyAnvilsConfigGetMethod = null;
         Field easyAnvilsConfigField = null;
@@ -46,27 +44,17 @@ public final class CinematicCompatClientHooks {
 
         try {
             ClassLoader loader = CinematicCompatClientHooks.class.getClassLoader();
-            Class<?> sceneClass = Class.forName(
-                    "dev.dyslexic.cinematic.client.Scene",
-                    false,
-                    loader);
-            Class<?> stationClass = Class.forName(
-                    "dev.dyslexic.cinematic.client.ClientStation",
-                    false,
-                    loader);
-            Class<?> anvilStationClass = Class.forName(
-                    "dev.dyslexic.cinematic.client.AnvilStation",
-                    false,
-                    loader);
+            Class<?> sceneClass = Class.forName("dev.dyslexic.cinematic.client.Scene", false, loader);
+            Class<?> stationClass = Class.forName("dev.dyslexic.cinematic.client.ClientStation", false, loader);
+            Class<?> anvilStationClass = Class.forName("dev.dyslexic.cinematic.client.AnvilStation", false, loader);
 
             activeMethod = sceneClass.getMethod("active");
             stationField = sceneClass.getField("station");
             stationPosField = stationClass.getField("pos");
-            stationSideField = stationClass.getDeclaredField("side");
-            stationSideField.setAccessible(true);
             phaseField = sceneClass.getField("phase");
             timeField = sceneClass.getField("time");
             stationKindMethod = stationClass.getMethod("kind");
+            stationSideMethod = stationClass.getMethod("sideDirection");
 
             anvilDrawContentsMethod = anvilStationClass.getDeclaredMethod(
                     "drawContents",
@@ -80,7 +68,7 @@ public final class CinematicCompatClientHooks {
             );
             anvilDrawContentsMethod.setAccessible(true);
         } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
-            // The optional Cinematic Interactions integration is simply inactive when the host is unavailable.
+            // The optional Cinematic Interactions integration is simply inactive when unavailable.
         }
 
         try {
@@ -89,20 +77,19 @@ public final class CinematicCompatClientHooks {
             Class<?> clientConfigClass = Class.forName("fuzs.easyanvils.config.ClientConfig", false, loader);
 
             easyAnvilsConfigField = easyAnvilsClass.getField("CONFIG");
-            Class<?> configHolderClass = easyAnvilsConfigField.getType();
-            easyAnvilsConfigGetMethod = configHolderClass.getMethod("get", Class.class);
+            easyAnvilsConfigGetMethod = easyAnvilsConfigField.getType().getMethod("get", Class.class);
             easyAnvilsRenderContentsField = clientConfigClass.getField("renderAnvilContents");
         } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
-            // If Easy Anvils changes its config API, preserve its default rendering behavior.
+            // If Easy Anvils changes its config API, preserve the default rendering behavior.
         }
 
         ACTIVE_METHOD = activeMethod;
         STATION_FIELD = stationField;
         STATION_POS_FIELD = stationPosField;
-        STATION_SIDE_FIELD = stationSideField;
         PHASE_FIELD = phaseField;
         TIME_FIELD = timeField;
         STATION_KIND_METHOD = stationKindMethod;
+        STATION_SIDE_METHOD = stationSideMethod;
         ANVIL_DRAW_CONTENTS_METHOD = anvilDrawContentsMethod;
         EASY_ANVILS_CONFIG_GET_METHOD = easyAnvilsConfigGetMethod;
         EASY_ANVILS_CONFIG_FIELD = easyAnvilsConfigField;
@@ -116,12 +103,10 @@ public final class CinematicCompatClientHooks {
         if (pos == null || ACTIVE_METHOD == null || STATION_FIELD == null || STATION_POS_FIELD == null) {
             return false;
         }
-
         try {
             if (!Boolean.TRUE.equals(ACTIVE_METHOD.invoke(null))) {
                 return false;
             }
-
             Object station = STATION_FIELD.get(null);
             return station != null && pos.equals(STATION_POS_FIELD.get(station));
         } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
@@ -129,12 +114,8 @@ public final class CinematicCompatClientHooks {
         }
     }
 
-    /** True while the current Cinematic Interactions scene is in its exit phase. */
     public static boolean isSceneOutro() {
-        if (PHASE_FIELD == null) {
-            return false;
-        }
-
+        if (PHASE_FIELD == null) return false;
         try {
             Object phase = PHASE_FIELD.get(null);
             return phase != null && "OUTRO".equals(phase.toString());
@@ -143,17 +124,11 @@ public final class CinematicCompatClientHooks {
         }
     }
 
-    /** True only while an anvil scene is playing its exit animation. */
     public static boolean isAnvilOutro() {
-        if (!isSceneOutro() || STATION_FIELD == null || STATION_KIND_METHOD == null) {
-            return false;
-        }
-
+        if (!isSceneOutro() || STATION_FIELD == null || STATION_KIND_METHOD == null) return false;
         try {
             Object station = STATION_FIELD.get(null);
-            if (station == null) {
-                return false;
-            }
+            if (station == null) return false;
             Object kind = STATION_KIND_METHOD.invoke(station);
             return kind != null && "ANVIL".equals(kind.toString());
         } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
@@ -161,54 +136,35 @@ public final class CinematicCompatClientHooks {
         }
     }
 
-    /** Whether Easy Anvils' client setting permits the items to be rendered. */
     public static boolean easyAnvilsRenderContentsEnabled() {
         if (EASY_ANVILS_CONFIG_FIELD == null || EASY_ANVILS_CONFIG_GET_METHOD == null
                 || EASY_ANVILS_RENDER_CONTENTS_FIELD == null) {
             return true;
         }
-
         try {
             Object holder = EASY_ANVILS_CONFIG_FIELD.get(null);
-            Object config = EASY_ANVILS_CONFIG_GET_METHOD.invoke(holder, EASY_ANVILS_RENDER_CONTENTS_FIELD.getDeclaringClass());
+            Object config = EASY_ANVILS_CONFIG_GET_METHOD.invoke(
+                    holder, EASY_ANVILS_RENDER_CONTENTS_FIELD.getDeclaringClass());
             return Boolean.TRUE.equals(EASY_ANVILS_RENDER_CONTENTS_FIELD.get(config));
         } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
             return true;
         }
     }
 
-    /**
-     * Draws the same stacked 3D anvil layout used by Cinematic Interactions.
-     * This variant is for a BlockEntityRenderer whose pose stack is already
-     * translated to the block's local origin.
-     */
+    /** Use from Easy Anvils' block-local BlockEntityRenderer pose stack. */
     public static boolean drawAnvilContentsAtBlockOrigin(
-            PoseStack pose,
-            MultiBufferSource buffers,
-            Direction side,
-            List<ItemStack> items,
-            int light) {
+            PoseStack pose, MultiBufferSource buffers, Direction side, List<ItemStack> items, int light) {
         return drawAnvilContents(pose, buffers, Vec3.ZERO, BlockPos.ZERO, side, items, light);
     }
 
-    /**
-     * Draws the same stacked 3D anvil layout used by Cinematic Interactions.
-     * This variant is for the world render pass, whose pose stack is
-     * camera-relative and therefore needs the block's world position.
-     */
+    /** Use from Cinematic Interactions' camera-relative world render pass. */
     public static boolean drawAnvilContents(
-            PoseStack pose,
-            MultiBufferSource buffers,
-            Vec3 camera,
-            BlockPos pos,
-            Direction side,
-            List<ItemStack> items,
-            int light) {
+            PoseStack pose, MultiBufferSource buffers, Vec3 camera, BlockPos pos,
+            Direction side, List<ItemStack> items, int light) {
         if (ANVIL_DRAW_CONTENTS_METHOD == null || pose == null || buffers == null
                 || camera == null || pos == null || side == null || items == null) {
             return false;
         }
-
         try {
             ANVIL_DRAW_CONTENTS_METHOD.invoke(null, pose, buffers, camera, pos, side, items, light);
             return true;
@@ -217,49 +173,28 @@ public final class CinematicCompatClientHooks {
         }
     }
 
-    /** Uses the current anvil scene and its saved menu contents during the outro. */
     public static boolean drawCurrentAnvilContents(
-            PoseStack pose,
-            MultiBufferSource buffers,
-            Vec3 camera,
-            List<ItemStack> items,
-            int light) {
-        if (STATION_FIELD == null || STATION_POS_FIELD == null || STATION_SIDE_FIELD == null) {
-            return false;
-        }
-
+            PoseStack pose, MultiBufferSource buffers, Vec3 camera, List<ItemStack> items, int light) {
+        if (STATION_FIELD == null || STATION_POS_FIELD == null || STATION_SIDE_METHOD == null) return false;
         try {
             Object station = STATION_FIELD.get(null);
-            if (station == null) {
-                return false;
-            }
-
+            if (station == null) return false;
             BlockPos pos = (BlockPos) STATION_POS_FIELD.get(station);
-            Direction side = (Direction) STATION_SIDE_FIELD.get(station);
+            Direction side = (Direction) STATION_SIDE_METHOD.invoke(station);
             return drawAnvilContents(pose, buffers, camera, pos, side, items, light);
         } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
             return false;
         }
     }
 
-    /**
-     * Quintic smooth-step progress over the requested duration. It matches
-     * Cinematic Interactions' Anim.smoother easing used by the scene outro.
-     */
+    /** Quintic smooth-step progress matching Cinematic Interactions' Anim.smoother easing. */
     public static float outroProgress(double durationSeconds) {
-        if (!isSceneOutro() || TIME_FIELD == null || durationSeconds <= 0.0) {
-            return 0.0f;
-        }
-
+        if (!isSceneOutro() || TIME_FIELD == null || durationSeconds <= 0.0) return 0.0f;
         try {
             Object value = TIME_FIELD.get(null);
-            if (!(value instanceof Number number)) {
-                return 0.0f;
-            }
-
+            if (!(value instanceof Number number)) return 0.0f;
             double t = Math.max(0.0, Math.min(1.0, number.doubleValue() / durationSeconds));
-            double eased = t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
-            return (float) eased;
+            return (float) (t * t * t * (t * (t * 6.0 - 15.0) + 10.0));
         } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
             return 0.0f;
         }
