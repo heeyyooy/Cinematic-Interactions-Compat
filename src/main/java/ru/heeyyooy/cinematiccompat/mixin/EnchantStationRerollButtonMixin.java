@@ -153,7 +153,8 @@ public abstract class EnchantStationRerollButtonMixin {
                 this.cinematiccompat$hoveringReroll,
                 affordable,
                 flashAge,
-                light
+                light,
+                this
         );
     }
 }

@@ -23,9 +23,10 @@ import java.lang.reflect.Method;
  * loads when Easy Magic is not installed.
  */
 public final class EasyMagicRerollHooks {
-    private static final double RUNE_BACKGROUND_SCALE = 0.70;
-    private static final double OUTER_RUNE_SCALE = 0.90;
-    private static final double INNER_RUNE_SCALE = 1.18;
+    private static final double VIOLET_SOCKET_RADIUS = 0.10;
+    private static final double BLUE_PERIMETER_RADIUS = 0.115;
+    private static final double SOCKET_CIRCLE_LIFT = 0.016;
+    private static final double OUTER_CIRCLE_LIFT = 0.012;
     private static final float CLOCK_MODEL_SCALE = 0.713f;
     private static final Class<?> MENU_CLASS;
     private static final Method CAN_ENCHANT_ITEM;
@@ -35,6 +36,8 @@ public final class EasyMagicRerollHooks {
     private static final Method PICKING_TO_GUI;
     private static final Field STATION_AIM;
     private static final Method STATION_SIDE;
+    private static final Method STATION_GEOMETRY;
+    private static final Method GEOMETRY_SCALE;
 
     private static final Method ITEM_PLACER_RENDER;
     private static final Method ENCHANT_FX_CIRCLE;
@@ -68,6 +71,8 @@ public final class EasyMagicRerollHooks {
         Method toGui = null;
         Field stationAim = null;
         Method stationSide = null;
+        Method stationGeometry = null;
+        Method geometryScale = null;
 
         Method itemPlacerRender = null;
         Method enchantFxCircle = null;
@@ -107,6 +112,18 @@ public final class EasyMagicRerollHooks {
             stationSide = stationClass.getMethod("sideDirection");
         } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
             // Cursor/hand integration is disabled if the Cinematic API changes.
+        }
+
+        try {
+            Class<?> spatialTargetClass = Class.forName(
+                    "dev.dyslexic.cinematic.client.SpatialTarget", false, loader);
+            Class<?> spatialAppearanceClass = Class.forName(
+                    "dev.dyslexic.cinematic.client.SpatialAppearance", false, loader);
+            stationGeometry = spatialTargetClass.getMethod("geometry");
+            geometryScale = spatialAppearanceClass.getDeclaredMethod("scale", int.class);
+            geometryScale.setAccessible(true);
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
+            // The vanilla socket proportions remain the safe fallback.
         }
 
         try {
@@ -200,6 +217,8 @@ public final class EasyMagicRerollHooks {
         PICKING_TO_GUI = toGui;
         STATION_AIM = stationAim;
         STATION_SIDE = stationSide;
+        STATION_GEOMETRY = stationGeometry;
+        GEOMETRY_SCALE = geometryScale;
         ITEM_PLACER_RENDER = itemPlacerRender;
         ENCHANT_FX_CIRCLE = enchantFxCircle;
         ENCHANT_FX_BILLBOARD = enchantFxBillboard;
@@ -422,6 +441,19 @@ public final class EasyMagicRerollHooks {
         }
     }
 
+    private static double lapisSocketScale(Object station) {
+        if (station == null || STATION_GEOMETRY == null || GEOMETRY_SCALE == null) {
+            return 1.0;
+        }
+        try {
+            Object geometry = STATION_GEOMETRY.invoke(station);
+            Object value = geometry == null ? null : GEOMETRY_SCALE.invoke(geometry, 1);
+            return value instanceof Number number ? Math.max(0.25, Math.min(2.5, number.doubleValue())) : 1.0;
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
+            return 1.0;
+        }
+    }
+
     public static double clock() {
         if (SCENE_CLOCK != null) {
             try {
@@ -519,7 +551,8 @@ public final class EasyMagicRerollHooks {
             boolean hovered,
             boolean affordable,
             double flashAge,
-            int light) {
+            int light,
+            Object station) {
         if (pose == null || buffers == null || camera == null || position == null) {
             return;
         }
@@ -532,53 +565,90 @@ public final class EasyMagicRerollHooks {
 
         Vec3 cameraPos = camera.getPosition();
         double clock = clock();
+        double layoutScale = lapisSocketScale(station);
         float hoverScale = hovered ? 1.10f : 1.0f;
-        float baseBrightness = affordable ? (hovered ? 0.92f : 0.68f) : (hovered ? 0.58f : 0.38f);
-        // Blue lapis with a smaller violet inner rune complements the gold clock
-        // without the harsh magenta/red contrast of the earlier pentagram.
-        Object outerPalette = palette("LAPIS");
-        Object innerPalette = palette("VIOLET");
-        Vec3 center = position.add(0.0, 0.006, 0.0);
+        float baseBrightness = affordable
+                ? (hovered ? 0.92f : 0.68f)
+                : (hovered ? 0.98f : 0.88f);
 
-        // The rune background has its own opacity animation, independent of the clock scale.
+        // Mirror the real lapis socket: the violet pad uses the same radius,
+        // vertical lift and layout scale as EnchantStation's lapis circle.
+        // The lapis-blue perimeter extends just beyond that pad.
+        Object outerPalette = palette(affordable ? "LAPIS" : "RED");
+        Object innerPalette = palette(affordable ? "VIOLET" : "RED");
+        Vec3 violetCenter = position.add(0.0, SOCKET_CIRCLE_LIFT, 0.0);
+        Vec3 blueCenter = position.add(0.0, OUTER_CIRCLE_LIFT, 0.0);
+
         if (background > 0.005f) {
-            float brightness = Math.max(baseBrightness, 0.78f) * background;
-            drawCircle(pose, buffers, cameraPos, center,
-                    0.132 * RUNE_BACKGROUND_SCALE * OUTER_RUNE_SCALE * hoverScale,
-                    clock * (hovered ? 0.78 : 0.30), outerPalette, brightness);
-            drawCircle(pose, buffers, cameraPos, center.add(0.0, 0.001, 0.0),
-                    0.078 * RUNE_BACKGROUND_SCALE * INNER_RUNE_SCALE * hoverScale,
-                    -clock * 0.52, innerPalette, brightness * 0.74f);
-            drawGlow(pose, buffers, camera, center.add(0.0, 0.018 * RUNE_BACKGROUND_SCALE, 0.0),
-                    0.15 * RUNE_BACKGROUND_SCALE * OUTER_RUNE_SCALE * hoverScale,
-                    0.18f * brightness,
-                    0.46f * brightness,
-                    0.95f * brightness,
-                    1.0f);
+            float brightness = baseBrightness * background;
+            drawCircle(
+                    pose,
+                    buffers,
+                    cameraPos,
+                    blueCenter,
+                    BLUE_PERIMETER_RADIUS * layoutScale * hoverScale,
+                    clock * (hovered ? 0.78 : 0.30),
+                    outerPalette,
+                    brightness
+            );
+            drawCircle(
+                    pose,
+                    buffers,
+                    cameraPos,
+                    violetCenter,
+                    VIOLET_SOCKET_RADIUS * layoutScale * hoverScale,
+                    -clock * 0.52,
+                    innerPalette,
+                    brightness * 0.82f
+            );
+
+            // Keep the glow centred on the socket. Insufficient resources turn
+            // the complete background red while leaving the gold clock unchanged.
+            float glowRed = affordable ? 0.18f : 1.0f;
+            float glowGreen = affordable ? 0.46f : 0.10f;
+            float glowBlue = affordable ? 0.95f : 0.14f;
+            drawGlow(
+                    pose,
+                    buffers,
+                    camera,
+                    position.add(0.0, 0.030 * layoutScale, 0.0),
+                    0.15 * layoutScale * hoverScale,
+                    glowRed * brightness,
+                    glowGreen * brightness,
+                    glowBlue * brightness,
+                    1.0f
+            );
 
             if (flashAge >= 0.0 && flashAge < 0.65) {
                 float flash = (float) (1.0 - flashAge / 0.65) * background;
-                drawCircle(pose, buffers, cameraPos, center.add(0.0, 0.003 * RUNE_BACKGROUND_SCALE, 0.0),
-                        (0.15 + 0.06 * (1.0 - flash)) * RUNE_BACKGROUND_SCALE * OUTER_RUNE_SCALE,
-                        clock * 1.8, outerPalette, flash * 0.95f);
+                drawCircle(
+                        pose,
+                        buffers,
+                        cameraPos,
+                        violetCenter.add(0.0, 0.003, 0.0),
+                        (BLUE_PERIMETER_RADIUS + 0.018 * (1.0 - flash)) * layoutScale,
+                        clock * 1.8,
+                        outerPalette,
+                        flash * 0.95f
+                );
             }
 
             LocalPlayer player = Minecraft.getInstance().player;
-            if (background > 0.45f && player != null
+            if (affordable && background > 0.45f && player != null
                     && player.tickCount % 7 == 0 && ENCHANT_FX_SPARKLE != null) {
                 try {
                     ENCHANT_FX_SPARKLE.invoke(
                             null,
-                            center.add(0.0, 0.025 * RUNE_BACKGROUND_SCALE, 0.0),
-                            0.09 * RUNE_BACKGROUND_SCALE);
+                            violetCenter.add(0.0, 0.025 * layoutScale, 0.0),
+                            0.09 * layoutScale
+                    );
                 } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
                     // Purely decorative.
                 }
             }
         }
 
-        // The gold clock is deliberately more prominent than the reduced rune
-        // base and has its own scale animation on entering and leaving the scene.
+        // The gold clock is independent of the rune palette and keeps its intro/outro scale animation.
         if (clockScale > 0.005f && ITEM_PLACER_RENDER != null) {
             try {
                 ITEM_PLACER_RENDER.invoke(
@@ -598,7 +668,6 @@ public final class EasyMagicRerollHooks {
                 // Rune and glow remain visible if the optional item-model bridge changes.
             }
         }
-
     }
 
     /** Trigger the same hand-tap timer used by normal EnchantStation slot clicks. */
