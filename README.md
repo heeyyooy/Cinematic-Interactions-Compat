@@ -49,12 +49,16 @@ not included in the resulting addon.
 - Caverns & Chasms Bejeweled Anvil
 - Amendments writable lectern menu payload and lectern BlockEntity subclasses
 
-Easy Magic's and Easy Anvils' own item renderers are temporarily suppressed only
-while Cinematic Interactions is showing the matching workstation scene. Their
-stored container items are not changed; the mods' normal renderers resume when
-the scene ends. Easy Magic's separate enchantment clues are also used by the
-enchanting scene so its availability tooltip does not incorrectly report
-limited enchantability.
+Easy Magic's and Easy Anvils' own item renderers are suppressed while
+Cinematic Interactions is drawing the matching workstation scene. Stored
+container items are not changed. During the enchanting-table outro, Easy Magic's
+normal table items cross-fade back in over 0.45 seconds while the Cinematic
+Interactions item and lapis fade out. This covers both Easy Magic's flat and
+floating item layouts. During the anvil outro, the input items stay at their
+rest positions instead of flying into the player's inventory.
+
+Easy Magic's separate enchantment clues are also used by the enchanting scene
+so its availability tooltip does not incorrectly report limited enchantability.
 
 ## Important status
 
