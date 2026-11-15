@@ -22,6 +22,8 @@ import java.lang.reflect.Method;
  */
 public final class EasyMagicRerollHooks {
     private static final double RUNE_BACKGROUND_SCALE = 0.70;
+    private static final double OUTER_RUNE_SCALE = 0.90;
+    private static final double INNER_RUNE_SCALE = 1.18;
     private static final float CLOCK_MODEL_SCALE = 0.713f;
     private static final Class<?> MENU_CLASS;
     private static final Method CAN_ENCHANT_ITEM;
@@ -423,13 +425,13 @@ public final class EasyMagicRerollHooks {
         if (background > 0.005f) {
             float brightness = Math.max(baseBrightness, 0.78f) * background;
             drawCircle(pose, buffers, cameraPos, center,
-                    0.132 * RUNE_BACKGROUND_SCALE * hoverScale,
+                    0.132 * RUNE_BACKGROUND_SCALE * OUTER_RUNE_SCALE * hoverScale,
                     clock * (hovered ? 0.78 : 0.30), outerPalette, brightness);
             drawCircle(pose, buffers, cameraPos, center.add(0.0, 0.001, 0.0),
-                    0.078 * RUNE_BACKGROUND_SCALE * hoverScale,
+                    0.078 * RUNE_BACKGROUND_SCALE * INNER_RUNE_SCALE * hoverScale,
                     -clock * 0.52, innerPalette, brightness * 0.74f);
             drawGlow(pose, buffers, camera, center.add(0.0, 0.018 * RUNE_BACKGROUND_SCALE, 0.0),
-                    0.15 * RUNE_BACKGROUND_SCALE * hoverScale,
+                    0.15 * RUNE_BACKGROUND_SCALE * OUTER_RUNE_SCALE * hoverScale,
                     0.18f * brightness,
                     0.46f * brightness,
                     0.95f * brightness,
@@ -438,7 +440,7 @@ public final class EasyMagicRerollHooks {
             if (flashAge >= 0.0 && flashAge < 0.65) {
                 float flash = (float) (1.0 - flashAge / 0.65) * background;
                 drawCircle(pose, buffers, cameraPos, center.add(0.0, 0.003 * RUNE_BACKGROUND_SCALE, 0.0),
-                        (0.15 + 0.06 * (1.0 - flash)) * RUNE_BACKGROUND_SCALE,
+                        (0.15 + 0.06 * (1.0 - flash)) * RUNE_BACKGROUND_SCALE * OUTER_RUNE_SCALE,
                         clock * 1.8, outerPalette, flash * 0.95f);
             }
 
