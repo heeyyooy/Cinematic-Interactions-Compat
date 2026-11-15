@@ -63,7 +63,7 @@ to Easy Anvils' side-by-side flat item layout. The Easy Anvils option to hide
 anvil contents is respected.
 
 Easy Magic's separate enchantment clues are also used by the enchanting scene
-so its availability tooltip does not incorrectly report limited enchantability.
+so its availability tooltip does not incorrectly report limited enchantability. Its reroll button is also available in the scene: a matching enchanted token sits to the left of the table, highlights on hover, and invokes Easy Magic's native reroll menu action with the configured resource checks and costs.
 
 ## Important status
 
