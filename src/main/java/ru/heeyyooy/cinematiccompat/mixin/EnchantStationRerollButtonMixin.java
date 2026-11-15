@@ -68,9 +68,7 @@ public abstract class EnchantStationRerollButtonMixin {
 
     @Inject(method = "updateCursor", at = @At("RETURN"), remap = false)
     private void cinematiccompat$pickRerollButton(boolean overPanel, CallbackInfo ci) {
-        if (overPanel
-                || !EasyMagicRerollHooks.isButtonVisible()
-                || !EasyMagicRerollHooks.hasAim(this)) {
+        if (overPanel || !EasyMagicRerollHooks.isButtonVisible()) {
             return;
         }
 

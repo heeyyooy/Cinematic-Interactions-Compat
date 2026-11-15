@@ -276,17 +276,6 @@ public final class EasyMagicRerollHooks {
         }
     }
 
-    public static boolean hasAim(Object station) {
-        if (station == null || STATION_AIM == null) {
-            return false;
-        }
-        try {
-            return STATION_AIM.get(station) != null;
-        } catch (IllegalAccessException | RuntimeException ignored) {
-            return false;
-        }
-    }
-
     public static void setAim(Object station, Vec3 aim) {
         if (station == null || aim == null || STATION_AIM == null) {
             return;
