@@ -61,7 +61,12 @@ public abstract class EnchantStationRerollButtonMixin {
         }
 
         Vec3 button = this.cinematiccompat$rerollPosition();
-        if (EasyMagicRerollHooks.isCursorOver(button, 0.14)) {
+        Direction side = EasyMagicRerollHooks.stationSide(this);
+        Vec3 right = Vec3.atLowerCornerOf(side.getOpposite().getClockWise().getNormal());
+        // Make the hit target a little wider and shift its centre left of the token
+        // so it is easier to pick without moving the visible item.
+        Vec3 hitCenter = button.subtract(right.scale(0.035));
+        if (EasyMagicRerollHooks.isCursorOver(hitCenter, 0.18)) {
             this.cinematiccompat$hoveringReroll = true;
             EasyMagicRerollHooks.setAim(this, button);
             this.aimAir = true;

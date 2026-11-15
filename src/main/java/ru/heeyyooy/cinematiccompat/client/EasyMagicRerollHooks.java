@@ -38,6 +38,9 @@ public final class EasyMagicRerollHooks {
     private static final Field ENCHANT_FX_GLOW;
     private static final Class<?> CIRCLE_PALETTE;
     private static final Method SCENE_CLOCK;
+    private static final Field SCENE_PHASE;
+    private static final Field SCENE_TIME;
+    private static final Method SCENE_INTRO_PROGRESS;
 
     private static final Field EASY_MAGIC_CONFIG;
     private static final Method EASY_MAGIC_CONFIG_GET;
@@ -63,6 +66,9 @@ public final class EasyMagicRerollHooks {
         Field enchantFxGlow = null;
         Class<?> circlePalette = null;
         Method sceneClock = null;
+        Field scenePhase = null;
+        Field sceneTime = null;
+        Method sceneIntroProgress = null;
 
         Field easyMagicConfig = null;
         Method easyMagicConfigGet = null;
@@ -141,8 +147,11 @@ public final class EasyMagicRerollHooks {
         try {
             Class<?> sceneClass = Class.forName("dev.dyslexic.cinematic.client.Scene", false, loader);
             sceneClock = sceneClass.getMethod("clock");
+            scenePhase = sceneClass.getField("phase");
+            sceneTime = sceneClass.getField("time");
+            sceneIntroProgress = sceneClass.getMethod("introProgress");
         } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
-            // The local player tick count is used as a fallback for animation timing.
+            // Clock animation falls back to the player tick count; scene transitions stay disabled.
         }
 
         try {
@@ -170,6 +179,9 @@ public final class EasyMagicRerollHooks {
         ENCHANT_FX_GLOW = enchantFxGlow;
         CIRCLE_PALETTE = circlePalette;
         SCENE_CLOCK = sceneClock;
+        SCENE_PHASE = scenePhase;
+        SCENE_TIME = sceneTime;
+        SCENE_INTRO_PROGRESS = sceneIntroProgress;
         EASY_MAGIC_CONFIG = easyMagicConfig;
         EASY_MAGIC_CONFIG_GET = easyMagicConfigGet;
         REROLL_ENABLED = rerollEnabled;
@@ -313,6 +325,71 @@ public final class EasyMagicRerollHooks {
         return player == null ? 0.0 : player.tickCount / 20.0;
     }
 
+    private static double smoothstep(double value) {
+        double t = Math.max(0.0, Math.min(1.0, value));
+        return t * t * (3.0 - 2.0 * t);
+    }
+
+    private static String scenePhase() {
+        if (SCENE_PHASE == null) {
+            return "ACTIVE";
+        }
+        try {
+            Object phase = SCENE_PHASE.get(null);
+            return phase == null ? "NONE" : phase.toString();
+        } catch (IllegalAccessException | RuntimeException ignored) {
+            return "ACTIVE";
+        }
+    }
+
+    private static double introProgress() {
+        if (SCENE_INTRO_PROGRESS == null) {
+            return 1.0;
+        }
+        try {
+            Object value = SCENE_INTRO_PROGRESS.invoke(null);
+            return value instanceof Number number ? number.doubleValue() : 1.0;
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
+            return 1.0;
+        }
+    }
+
+    private static double outroProgress() {
+        if (SCENE_TIME == null) {
+            return 0.0;
+        }
+        try {
+            Object value = SCENE_TIME.get(null);
+            return value instanceof Number number ? number.doubleValue() / 0.45 : 0.0;
+        } catch (IllegalAccessException | RuntimeException ignored) {
+            return 0.0;
+        }
+    }
+
+    /** Opacity of the rune base: it fades with the actual scene intro/outro. */
+    private static float backgroundPresence() {
+        return switch (scenePhase()) {
+            case "INTRO" -> (float) smoothstep(introProgress());
+            case "ACTIVE" -> 1.0f;
+            case "OUTRO" -> (float) (1.0 - smoothstep(outroProgress()));
+            default -> 0.0f;
+        };
+    }
+
+    /** The clock grows in during intro and shrinks away during outro. */
+    private static float clockPresence() {
+        return switch (scenePhase()) {
+            case "INTRO" -> {
+                double t = Math.max(0.0, Math.min(1.0, introProgress()));
+                // Ease-out cubic: starts small and settles exactly at its normal size.
+                yield (float) (1.0 - Math.pow(1.0 - t, 3.0));
+            }
+            case "ACTIVE" -> 1.0f;
+            case "OUTRO" -> (float) (1.0 - smoothstep(outroProgress()));
+            default -> 0.0f;
+        };
+    }
+
     /**
      * A physical reroll token: a dropped clock model, surrounded by the same
      * pixel-rune and glow effects used by the enchanting offers.
@@ -331,25 +408,56 @@ public final class EasyMagicRerollHooks {
             return;
         }
 
+        float background = backgroundPresence();
+        float clockScale = clockPresence();
+        if (background <= 0.005f && clockScale <= 0.005f) {
+            return;
+        }
+
         Vec3 cameraPos = camera.getPosition();
         double clock = clock();
-        float scale = hovered ? 1.12f : 1.0f;
-        float brightness = affordable ? (hovered ? 0.92f : 0.68f) : (hovered ? 0.60f : 0.40f);
-        Object outerPalette = palette(affordable ? "VIOLET" : "RED");
-        Object innerPalette = palette(affordable ? "LAPIS" : "RED");
+        float hoverScale = hovered ? 1.10f : 1.0f;
+        float baseBrightness = affordable ? (hovered ? 0.92f : 0.68f) : (hovered ? 0.58f : 0.38f);
+        // Blue lapis with a smaller violet inner rune complements the gold clock
+        // without the harsh magenta/red contrast of the earlier pentagram.
+        Object outerPalette = palette("LAPIS");
+        Object innerPalette = palette("VIOLET");
         Vec3 center = position.add(0.0, 0.006, 0.0);
 
-        drawCircle(pose, buffers, cameraPos, center,
-                0.155 * scale, clock * (hovered ? 0.85 : 0.34), outerPalette, brightness);
-        drawCircle(pose, buffers, cameraPos, center.add(0.0, 0.001, 0.0),
-                0.092 * scale, -clock * 0.58, innerPalette, brightness * 0.72f);
-        drawGlow(pose, buffers, camera, center.add(0.0, 0.018, 0.0),
-                0.18 * scale, affordable ? 0.55f : 0.36f,
-                affordable ? 0.20f : 0.08f, affordable ? 0.95f : 0.22f,
-                brightness * (hovered ? 0.95f : 0.58f));
+        // The rune background has its own opacity animation, independent of the clock scale.
+        if (background > 0.005f) {
+            float brightness = baseBrightness * background;
+            drawCircle(pose, buffers, cameraPos, center,
+                    0.132 * hoverScale, clock * (hovered ? 0.78 : 0.30), outerPalette, brightness);
+            drawCircle(pose, buffers, cameraPos, center.add(0.0, 0.001, 0.0),
+                    0.078 * hoverScale, -clock * 0.52, innerPalette, brightness * 0.74f);
+            drawGlow(pose, buffers, camera, center.add(0.0, 0.018, 0.0),
+                    0.15 * hoverScale,
+                    0.18f * brightness,
+                    0.46f * brightness,
+                    0.95f * brightness,
+                    1.0f);
 
-        // The gold clock dial reads as a physical reroll token.
-        if (ITEM_PLACER_RENDER != null) {
+            if (flashAge >= 0.0 && flashAge < 0.65) {
+                float flash = (float) (1.0 - flashAge / 0.65) * background;
+                drawCircle(pose, buffers, cameraPos, center.add(0.0, 0.003, 0.0),
+                        0.15 + 0.06 * (1.0 - flash), clock * 1.8, outerPalette, flash * 0.95f);
+            }
+
+            LocalPlayer player = Minecraft.getInstance().player;
+            if (background > 0.45f && player != null
+                    && player.tickCount % 7 == 0 && ENCHANT_FX_SPARKLE != null) {
+                try {
+                    ENCHANT_FX_SPARKLE.invoke(null, center.add(0.0, 0.025, 0.0), 0.09);
+                } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
+                    // Purely decorative.
+                }
+            }
+        }
+
+        // The gold clock is deliberately smaller than the rune base and has
+        // its own scale animation on entering and leaving the scene.
+        if (clockScale > 0.005f && ITEM_PLACER_RENDER != null) {
             try {
                 ITEM_PLACER_RENDER.invoke(
                         null,
@@ -360,27 +468,12 @@ public final class EasyMagicRerollHooks {
                         position.add(0.0, 0.009, 0.0),
                         facing == null ? Direction.NORTH : facing,
                         0x5245524F4C4CL,
-                        0.78f * scale,
+                        0.62f * clockScale * hoverScale,
                         0.0f,
                         light
                 );
             } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
                 // Rune and glow remain visible if the optional item-model bridge changes.
-            }
-        }
-
-        if (flashAge >= 0.0 && flashAge < 0.65) {
-            float flash = (float) (1.0 - flashAge / 0.65);
-            drawCircle(pose, buffers, cameraPos, center.add(0.0, 0.003, 0.0),
-                    0.18 + 0.08 * (1.0 - flash), clock * 1.8, outerPalette, flash * 0.95f);
-        }
-
-        LocalPlayer player = Minecraft.getInstance().player;
-        if (player != null && player.tickCount % 7 == 0 && ENCHANT_FX_SPARKLE != null) {
-            try {
-                ENCHANT_FX_SPARKLE.invoke(null, center.add(0.0, 0.025, 0.0), 0.11);
-            } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
-                // Purely decorative.
             }
         }
     }
