@@ -1,37 +1,46 @@
 package ru.heeyyooy.cinematiccompat.mixin;
 
 import ru.heeyyooy.cinematiccompat.client.CinematicCompatClientHooks;
+
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.Camera;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.world.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+import java.util.List;
 
 /**
- * MenuStation normally animates every leftover input flying into the player's
- * inventory during an outro. Easy Anvils keeps its input stacks in the anvil,
- * so leave the interpolation at zero for anvil scenes: the same items stay
- * drawn at their rest points until the cinematic scene ends.
+ * MenuStation normally animates leftover input slots as separate items flying
+ * toward the camera. Anvil scenes instead keep drawing the exact same stacked
+ * 3D pile as the active anvil scene.
  */
 @Pseudo
 @Mixin(targets = "dev.dyslexic.cinematic.client.MenuStation", remap = false)
 public abstract class MenuStationAnvilOutroMixin {
-    @Redirect(
-            method = "drawLeaving",
-            at = @At(
-                    value = "INVOKE",
-                    target = "Ldev/dyslexic/cinematic/client/Anim;window(DDD)D"
-            ),
-            remap = false
-    )
-    private double cinematiccompat$keepAnvilInputsOnBlock(double time, double start, double end) {
-        if (CinematicCompatClientHooks.isAnvilOutro()) {
-            // Anim.inOutCubic(0) keeps each stored input exactly at restPoint().
-            return 0.0;
-        }
+    @Shadow
+    protected abstract List<ItemStack> leftBehind();
 
-        if (end <= start) {
-            return time >= end ? 1.0 : 0.0;
+    @Inject(method = "drawLeaving", at = @At("HEAD"), cancellable = true, remap = false)
+    private void cinematiccompat$keepAnvilPileThroughOutro(
+            PoseStack pose,
+            MultiBufferSource buffers,
+            Camera camera,
+            int light,
+            CallbackInfo ci) {
+        if (CinematicCompatClientHooks.isAnvilOutro()
+                && CinematicCompatClientHooks.drawCurrentAnvilContents(
+                        pose,
+                        buffers,
+                        camera.getPosition(),
+                        this.leftBehind(),
+                        light)) {
+            ci.cancel();
         }
-        return Math.max(0.0, Math.min(1.0, (time - start) / (end - start)));
     }
 }

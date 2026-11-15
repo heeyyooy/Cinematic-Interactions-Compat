@@ -3,6 +3,7 @@ package ru.heeyyooy.cinematiccompat.mixin;
 import ru.heeyyooy.cinematiccompat.client.CinematicCompatClientHooks;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.core.Direction;
 import net.minecraft.world.Container;
@@ -17,9 +18,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.List;
 
 /**
- * Easy Anvils normally separates the two inputs on its anvil renderer. Use
- * Cinematic Interactions' own stacked 3D renderer instead, so the item layout
- * does not jump sideways when the cinematic scene ends.
+ * Reuses Cinematic Interactions' central 3D item pile in every state. During
+ * the scene its own renderer is already active; afterwards this renderer keeps
+ * the same orientation and position rather than reverting to Easy Anvils'
+ * side-by-side flat layout.
  */
 @Pseudo
 @Mixin(targets = "fuzs.easyanvils.client.renderer.blockentity.AnvilRenderer", remap = false)
@@ -33,26 +35,21 @@ public abstract class EasyAnvilsRendererMixin {
             int packedLight,
             int packedOverlay,
             CallbackInfo ci) {
-        if (blockEntity == null) {
+        if (blockEntity == null || !CinematicCompatClientHooks.easyAnvilsRenderContentsEnabled()) {
             return;
         }
 
-        // During the scene, Cinematic Interactions already draws the same
-        // 3D pile; don't let Easy Anvils draw a second copy.
+        // During the scene Cinematic Interactions draws the same 3D pile.
         if (CinematicCompatClientHooks.isSceneActiveAt(blockEntity.getBlockPos())) {
             ci.cancel();
             return;
         }
 
-        // Once the scene ends, keep using the exact same 3D stacked layout
-        // rather than switching to Easy Anvils' two side-by-side flat items.
         if (blockEntity instanceof Container container) {
             Direction side = blockEntity.getBlockState().getValue(AnvilBlock.FACING);
-            boolean rendered = CinematicCompatClientHooks.drawAnvilContents(
+            boolean rendered = CinematicCompatClientHooks.drawAnvilContentsAtBlockOrigin(
                     poseStack,
                     bufferSource,
-                    net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera().getPosition(),
-                    blockEntity.getBlockPos(),
                     side,
                     List.of(container.getItem(0), container.getItem(1)),
                     packedLight

@@ -54,8 +54,13 @@ Cinematic Interactions is drawing the matching workstation scene. Stored
 container items are not changed. During the enchanting-table outro, Easy Magic's
 normal table items cross-fade back in over 0.45 seconds while the Cinematic
 Interactions item and lapis fade out. This covers both Easy Magic's flat and
-floating item layouts. During the anvil outro, the input items stay at their
-rest positions instead of flying into the player's inventory.
+floating item layouts.
+
+Easy Anvils uses the same central, three-dimensional item pile as Cinematic
+Interactions during the active scene and its outro. The addon's renderer keeps
+that same position and orientation after the scene ends instead of reverting
+to Easy Anvils' side-by-side flat item layout. The Easy Anvils option to hide
+anvil contents is respected.
 
 Easy Magic's separate enchantment clues are also used by the enchanting scene
 so its availability tooltip does not incorrectly report limited enchantability.

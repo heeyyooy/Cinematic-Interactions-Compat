@@ -13,7 +13,7 @@
     "EnchantStationEasyMagicMixin",
     "EasyMagicRendererMixin",
     "EasyAnvilsRendererMixin",
-    "AnvilStationOutroMixin"
+    "MenuStationAnvilOutroMixin"
   ],
   "injectors": {
     "defaultRequire": 1

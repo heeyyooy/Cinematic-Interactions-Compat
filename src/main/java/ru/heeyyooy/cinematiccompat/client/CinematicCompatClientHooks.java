@@ -27,6 +27,9 @@ public final class CinematicCompatClientHooks {
     private static final Field TIME_FIELD;
     private static final Method STATION_KIND_METHOD;
     private static final Method ANVIL_DRAW_CONTENTS_METHOD;
+    private static final Method EASY_ANVILS_CONFIG_GET_METHOD;
+    private static final Field EASY_ANVILS_CONFIG_FIELD;
+    private static final Field EASY_ANVILS_RENDER_CONTENTS_FIELD;
 
     static {
         Method activeMethod = null;
@@ -37,6 +40,9 @@ public final class CinematicCompatClientHooks {
         Field timeField = null;
         Method stationKindMethod = null;
         Method anvilDrawContentsMethod = null;
+        Method easyAnvilsConfigGetMethod = null;
+        Field easyAnvilsConfigField = null;
+        Field easyAnvilsRenderContentsField = null;
 
         try {
             ClassLoader loader = CinematicCompatClientHooks.class.getClassLoader();
@@ -74,7 +80,20 @@ public final class CinematicCompatClientHooks {
             );
             anvilDrawContentsMethod.setAccessible(true);
         } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
-            // The optional client integration is simply inactive when the host is unavailable.
+            // The optional Cinematic Interactions integration is simply inactive when the host is unavailable.
+        }
+
+        try {
+            ClassLoader loader = CinematicCompatClientHooks.class.getClassLoader();
+            Class<?> easyAnvilsClass = Class.forName("fuzs.easyanvils.EasyAnvils", false, loader);
+            Class<?> clientConfigClass = Class.forName("fuzs.easyanvils.config.ClientConfig", false, loader);
+
+            easyAnvilsConfigField = easyAnvilsClass.getField("CONFIG");
+            Class<?> configHolderClass = easyAnvilsConfigField.getType();
+            easyAnvilsConfigGetMethod = configHolderClass.getMethod("get", Class.class);
+            easyAnvilsRenderContentsField = clientConfigClass.getField("renderAnvilContents");
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
+            // If Easy Anvils changes its config API, preserve its default rendering behavior.
         }
 
         ACTIVE_METHOD = activeMethod;
@@ -85,6 +104,9 @@ public final class CinematicCompatClientHooks {
         TIME_FIELD = timeField;
         STATION_KIND_METHOD = stationKindMethod;
         ANVIL_DRAW_CONTENTS_METHOD = anvilDrawContentsMethod;
+        EASY_ANVILS_CONFIG_GET_METHOD = easyAnvilsConfigGetMethod;
+        EASY_ANVILS_CONFIG_FIELD = easyAnvilsConfigField;
+        EASY_ANVILS_RENDER_CONTENTS_FIELD = easyAnvilsRenderContentsField;
     }
 
     private CinematicCompatClientHooks() {
@@ -139,10 +161,40 @@ public final class CinematicCompatClientHooks {
         }
     }
 
+    /** Whether Easy Anvils' client setting permits the items to be rendered. */
+    public static boolean easyAnvilsRenderContentsEnabled() {
+        if (EASY_ANVILS_CONFIG_FIELD == null || EASY_ANVILS_CONFIG_GET_METHOD == null
+                || EASY_ANVILS_RENDER_CONTENTS_FIELD == null) {
+            return true;
+        }
+
+        try {
+            Object holder = EASY_ANVILS_CONFIG_FIELD.get(null);
+            Object config = EASY_ANVILS_CONFIG_GET_METHOD.invoke(holder, EASY_ANVILS_RENDER_CONTENTS_FIELD.getDeclaringClass());
+            return Boolean.TRUE.equals(EASY_ANVILS_RENDER_CONTENTS_FIELD.get(config));
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
+            return true;
+        }
+    }
+
     /**
-     * Renders the same stacked, three-dimensional anvil items as the
-     * Cinematic Interactions scene. This keeps their position and orientation
-     * identical after the cinematic camera has returned to normal.
+     * Draws the same stacked 3D anvil layout used by Cinematic Interactions.
+     * This variant is for a BlockEntityRenderer whose pose stack is already
+     * translated to the block's local origin.
+     */
+    public static boolean drawAnvilContentsAtBlockOrigin(
+            PoseStack pose,
+            MultiBufferSource buffers,
+            Direction side,
+            List<ItemStack> items,
+            int light) {
+        return drawAnvilContents(pose, buffers, Vec3.ZERO, BlockPos.ZERO, side, items, light);
+    }
+
+    /**
+     * Draws the same stacked 3D anvil layout used by Cinematic Interactions.
+     * This variant is for the world render pass, whose pose stack is
+     * camera-relative and therefore needs the block's world position.
      */
     public static boolean drawAnvilContents(
             PoseStack pose,
