@@ -12,9 +12,8 @@ import java.lang.reflect.Method;
 import java.util.List;
 
 /**
- * Accesses the current Cinematic Interactions scene without making its client
- * implementation a compile-time dependency of this compatibility addon.
- * This class intentionally lives outside the reserved mixin package.
+ * Small runtime bridge to Cinematic Interactions and Easy Anvils.
+ * It lives outside the reserved mixin package.
  */
 public final class CinematicCompatClientHooks {
     private static final Method ACTIVE_METHOD;
@@ -55,8 +54,11 @@ public final class CinematicCompatClientHooks {
             timeField = sceneClass.getField("time");
             stationKindMethod = stationClass.getMethod("kind");
             stationSideMethod = stationClass.getMethod("sideDirection");
-            anvilDrawContentsMethod = anvilStationClass.getMethod(
-                    "cinematiccompat$drawContents",
+
+            // Added by AnvilStationOutroMixin's @Invoker. Use getDeclaredMethod
+            // because the merged invoker deliberately has protected visibility.
+            anvilDrawContentsMethod = anvilStationClass.getDeclaredMethod(
+                    "cinematiccompat$drawContentsForOutro",
                     PoseStack.class,
                     MultiBufferSource.class,
                     Vec3.class,
@@ -65,8 +67,9 @@ public final class CinematicCompatClientHooks {
                     List.class,
                     int.class
             );
+            anvilDrawContentsMethod.setAccessible(true);
         } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
-            // The optional Cinematic Interactions integration is simply inactive when unavailable.
+            // The optional Cinematic Interactions integration is inactive if its API is unavailable.
         }
 
         try {
@@ -78,7 +81,7 @@ public final class CinematicCompatClientHooks {
             easyAnvilsConfigGetMethod = easyAnvilsConfigField.getType().getMethod("get", Class.class);
             easyAnvilsRenderContentsField = clientConfigClass.getField("renderAnvilContents");
         } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
-            // If Easy Anvils changes its config API, preserve the default rendering behavior.
+            // If Easy Anvils changes its config API, preserve its default rendering behavior.
         }
 
         ACTIVE_METHOD = activeMethod;
@@ -134,6 +137,26 @@ public final class CinematicCompatClientHooks {
         }
     }
 
+    public static BlockPos currentScenePos() {
+        if (STATION_FIELD == null || STATION_POS_FIELD == null) return null;
+        try {
+            Object station = STATION_FIELD.get(null);
+            return station == null ? null : (BlockPos) STATION_POS_FIELD.get(station);
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
+            return null;
+        }
+    }
+
+    public static Direction currentSceneSide() {
+        if (STATION_FIELD == null || STATION_SIDE_METHOD == null) return null;
+        try {
+            Object station = STATION_FIELD.get(null);
+            return station == null ? null : (Direction) STATION_SIDE_METHOD.invoke(station);
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
+            return null;
+        }
+    }
+
     public static boolean easyAnvilsRenderContentsEnabled() {
         if (EASY_ANVILS_CONFIG_FIELD == null || EASY_ANVILS_CONFIG_GET_METHOD == null
                 || EASY_ANVILS_RENDER_CONTENTS_FIELD == null) {
@@ -155,7 +178,7 @@ public final class CinematicCompatClientHooks {
         return drawAnvilContents(pose, buffers, Vec3.ZERO, BlockPos.ZERO, side, items, light);
     }
 
-    /** Use from Cinematic Interactions' camera-relative world render pass. */
+    /** Use from a camera-relative world render pass. */
     public static boolean drawAnvilContents(
             PoseStack pose, MultiBufferSource buffers, Vec3 camera, BlockPos pos,
             Direction side, List<ItemStack> items, int light) {
@@ -166,20 +189,6 @@ public final class CinematicCompatClientHooks {
         try {
             ANVIL_DRAW_CONTENTS_METHOD.invoke(null, pose, buffers, camera, pos, side, items, light);
             return true;
-        } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
-            return false;
-        }
-    }
-
-    public static boolean drawCurrentAnvilContents(
-            PoseStack pose, MultiBufferSource buffers, Vec3 camera, List<ItemStack> items, int light) {
-        if (STATION_FIELD == null || STATION_POS_FIELD == null || STATION_SIDE_METHOD == null) return false;
-        try {
-            Object station = STATION_FIELD.get(null);
-            if (station == null) return false;
-            BlockPos pos = (BlockPos) STATION_POS_FIELD.get(station);
-            Direction side = (Direction) STATION_SIDE_METHOD.invoke(station);
-            return drawAnvilContents(pose, buffers, camera, pos, side, items, light);
         } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
             return false;
         }
