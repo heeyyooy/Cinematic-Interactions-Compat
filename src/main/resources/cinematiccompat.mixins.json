@@ -12,7 +12,9 @@
   "client": [
     "EnchantStationEasyMagicMixin",
     "EasyMagicRendererMixin",
-    "EasyAnvilsRendererMixin"
+    "EasyAnvilsRendererMixin",
+    "EnchantStationOutroMixin",
+    "MenuStationAnvilOutroMixin"
   ],
   "injectors": {
     "defaultRequire": 1
