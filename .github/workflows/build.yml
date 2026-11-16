@@ -30,7 +30,7 @@ jobs:
       - name: Upload mod JAR
         uses: actions/upload-artifact@v4
         with:
-          name: cinematic-compat-crimson-bookshelf
+          name: cinematic-compat-carved-wood-three-shelves
           path: build/libs/*.jar
           if-no-files-found: error
           retention-days: 14
