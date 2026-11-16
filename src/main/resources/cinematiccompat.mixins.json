@@ -15,7 +15,10 @@
     "EasyAnvilsRendererMixin",
     "AnvilStationOutroMixin",
     "EnchantStationRerollButtonMixin",
-    "HandsTapRequestMixin"
+    "HandsTapRequestMixin",
+    "CarvedShelfStationMixin",
+    "CarvedShelfBooksMixin",
+    "CarvedShelfModelsMixin"
   ],
   "injectors": {
     "defaultRequire": 1
