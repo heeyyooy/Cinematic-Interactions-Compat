@@ -134,6 +134,7 @@ public final class CarvedBookshelfCompatHooks {
     }
 
     private static final ThreadLocal<ShelfContext> CURRENT = new ThreadLocal<>();
+    private static final ThreadLocal<BlockPos> RENDERING_SHELF = new ThreadLocal<>();
     private static final ModelProperty<Integer> EMPTIED_SLOTS = new ModelProperty<>();
 
     private static volatile Field hiddenSlotsField;
@@ -314,7 +315,8 @@ public final class CarvedBookshelfCompatHooks {
      * Crimson intentionally retains the previous test implementation.
      */
     public static Object look(int slot) {
-        ShelfContext context = CURRENT.get();
+        BlockPos renderingPos = RENDERING_SHELF.get();
+        ShelfContext context = renderingPos == null ? CURRENT.get() : context(renderingPos, slot);
         if (context == null || slot < 0 || slot >= context.shelf().rectangles().length) {
             return null;
         }
@@ -351,21 +353,31 @@ public final class CarvedBookshelfCompatHooks {
                 spineU1 = (r.u0() + 0.7f) / 16.0f;
                 spineV1 = y1;
             }
-        } else {
-            // Covers sample a thin strip from inside the book's spine edge.
-            if (r.horizontal()) {
-                boardU0 = x0;
-                boardV0 = (r.v0() + 1.3f) / 16.0f;
-                boardU1 = x1;
-                boardV1 = (r.v0() + 1.7f) / 16.0f;
-            } else {
-                boardU0 = (r.u0() + 1.3f) / 16.0f;
-                boardV0 = y0;
-                boardU1 = (r.u0() + 1.7f) / 16.0f;
-                boardV1 = y1;
-            }
+        } else if (r.horizontal()) {
+            /*
+             * A horizontal book lies cover-up in this bookshelf slot. Its
+             * entire artwork belongs on the broad 3D board. Only the bottom
+             * texture row is the narrow exposed fore-edge/spine. Previously
+             * these UVs were reversed: a tiny middle strip covered the board
+             * and the whole horizontal picture was stretched over the spine.
+             */
+            boardU0 = x0;
+            boardV0 = y0;
+            boardU1 = x1;
+            boardV1 = y1;
 
-            // The complete sprite region is mapped onto the narrow 3D spine.
+            spineU0 = x0;
+            spineV0 = (r.v1() - 1.0f) / 16.0f;
+            spineU1 = x1;
+            spineV1 = y1;
+        } else {
+            // A vertical book shows its spine; sample the thin central strip
+            // for the board colour and the complete spine artwork on the edge.
+            boardU0 = (r.u0() + 1.3f) / 16.0f;
+            boardV0 = y0;
+            boardU1 = (r.u0() + 1.7f) / 16.0f;
+            boardV1 = y1;
+
             spineU0 = x0;
             spineV0 = y0;
             spineU1 = x1;
@@ -390,6 +402,15 @@ public final class CarvedBookshelfCompatHooks {
         return Minecraft.getInstance()
                 .getTextureAtlas(TextureAtlas.LOCATION_BLOCKS)
                 .apply(location);
+    }
+
+    /** Set by ShelfStation.renderBooks so look(slot) is bound to this shelf. */
+    public static void beginShelfRender(BlockPos pos) {
+        RENDERING_SHELF.set(pos);
+    }
+
+    public static void endShelfRender() {
+        RENDERING_SHELF.remove();
     }
 
     public static boolean isCurrentBookHorizontal() {
