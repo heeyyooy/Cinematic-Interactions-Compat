@@ -3,6 +3,8 @@ package ru.heeyyooy.cinematiccompat.client;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.renderer.block.BlockModelShaper;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.resources.model.BakedModel;
@@ -361,6 +363,22 @@ public final class CarvedBookshelfCompatHooks {
         } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
             return null;
         }
+    }
+
+    /**
+     * Resolves book-cover textures without discarding their namespace.
+     * Cinematic Interactions' Fx.sprite(String) treats every value as a
+     * minecraft-relative path, so namespaced Carved Wood textures must be
+     * resolved directly from the block atlas.
+     */
+    public static TextureAtlasSprite sprite(String texture) {
+        ResourceLocation location = ResourceLocation.tryParse(texture);
+        if (location == null) {
+            location = ResourceLocation.withDefaultNamespace(texture);
+        }
+        return Minecraft.getInstance()
+                .getTextureAtlas(TextureAtlas.LOCATION_BLOCKS)
+                .apply(location);
     }
 
     public static boolean isCurrentBookHorizontal() {
