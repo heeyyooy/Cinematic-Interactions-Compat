@@ -364,27 +364,21 @@ public final class CarvedBookshelfCompatHooks {
             }
         } else if (r.horizontal()) {
             /*
-             * The acacia books lie sideways. Their source spine art is wide
-             * (U = book length) and short (V = book thickness).
-             *
-             * On the broad boards, sample a one-pixel-high band across the
-             * whole length. boardUv() swaps the vertex assignment so source
-             * U follows the physical long axis and source V follows depth.
-             *
-             * On the narrow spine edge, swap the coordinate ranges too:
-             * source V becomes the local U/thickness axis, source U becomes
-             * the local V/length axis. This prevents the entire rectangle
-             * from being stretched across a portrait-oriented face.
+             * The acacia books lie sideways. The broad cover samples the
+             * narrow middle band of the book image across its full length.
+             * boardUv() rotates this strip onto the physical long axis.
+             * The narrow spine face keeps the complete source rectangle;
+             * drawShut() rotates its four UV corners separately.
              */
             boardU0 = x0;
             boardV0 = (r.v0() + 1.3f) / 16.0f;
             boardU1 = x1;
             boardV1 = (r.v0() + 1.7f) / 16.0f;
 
-            spineU0 = boardV0;
-            spineV0 = x0;
-            spineU1 = boardV1;
-            spineV1 = x1;
+            spineU0 = x0;
+            spineV0 = y0;
+            spineU1 = x1;
+            spineV1 = y1;
         } else {
             // A vertical book shows its spine; sample the thin central strip
             // for the board colour and the complete spine artwork on the edge.
