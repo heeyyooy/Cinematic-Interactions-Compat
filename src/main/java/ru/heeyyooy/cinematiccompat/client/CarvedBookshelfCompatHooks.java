@@ -364,21 +364,27 @@ public final class CarvedBookshelfCompatHooks {
             }
         } else if (r.horizontal()) {
             /*
-             * Match the vanilla board sampling rule: use one narrow column
-             * of the book image for the boards and its complete height. Since
-             * the book itself is laid sideways, boardUv() rotates this narrow
-             * U strip onto the correct axis. Using the full U range and a
-             * thin V row here made the texture appear turned and stretched.
+             * The acacia books lie sideways. Their source spine art is wide
+             * (U = book length) and short (V = book thickness).
+             *
+             * On the broad boards, sample a one-pixel-high band across the
+             * whole length. boardUv() swaps the vertex assignment so source
+             * U follows the physical long axis and source V follows depth.
+             *
+             * On the narrow spine edge, swap the coordinate ranges too:
+             * source V becomes the local U/thickness axis, source U becomes
+             * the local V/length axis. This prevents the entire rectangle
+             * from being stretched across a portrait-oriented face.
              */
-            boardU0 = (r.u0() + 1.3f) / 16.0f;
-            boardV0 = y0;
-            boardU1 = (r.u0() + 1.7f) / 16.0f;
-            boardV1 = y1;
+            boardU0 = x0;
+            boardV0 = (r.v0() + 1.3f) / 16.0f;
+            boardU1 = x1;
+            boardV1 = (r.v0() + 1.7f) / 16.0f;
 
-            spineU0 = x0;
-            spineV0 = y0;
-            spineU1 = x1;
-            spineV1 = y1;
+            spineU0 = boardV0;
+            spineV0 = x0;
+            spineU1 = boardV1;
+            spineV1 = x1;
         } else {
             // A vertical book shows its spine; sample the thin central strip
             // for the board colour and the complete spine artwork on the edge.
@@ -439,11 +445,15 @@ public final class CarvedBookshelfCompatHooks {
         if (!isCurrentBookHorizontal() || original == null || original.length != 8) {
             return original;
         }
+        // OpenBook.boardUv() orders corners as:
+        // (near-left, near-right, far-right, far-left). For a sideways book,
+        // the texture's long U axis must follow the book's long horizontal
+        // axis (vertices 0->3), not its depth axis (vertices 0->1).
         return new float[]{
-                original[6], original[7],
                 original[0], original[1],
-                original[2], original[3],
-                original[4], original[5]
+                original[6], original[7],
+                original[4], original[5],
+                original[2], original[3]
         };
     }
 
