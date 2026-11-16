@@ -411,6 +411,7 @@ public final class CarvedBookshelfCompatHooks {
 
     public static void endShelfRender() {
         RENDERING_SHELF.remove();
+        CURRENT.remove();
     }
 
     public static boolean isCurrentBookHorizontal() {
