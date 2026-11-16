@@ -364,15 +364,16 @@ public final class CarvedBookshelfCompatHooks {
             }
         } else if (r.horizontal()) {
             /*
-             * On a horizontal book, the long texture axis (U) follows the
-             * book's long axis after boardUv() rotates its corners. The broad
-             * boards sample only a thin middle band of the book artwork;
-             * the narrow side/spine displays the complete horizontal image.
+             * Match the vanilla board sampling rule: use one narrow column
+             * of the book image for the boards and its complete height. Since
+             * the book itself is laid sideways, boardUv() rotates this narrow
+             * U strip onto the correct axis. Using the full U range and a
+             * thin V row here made the texture appear turned and stretched.
              */
-            boardU0 = x0;
-            boardV0 = (r.v0() + 1.3f) / 16.0f;
-            boardU1 = x1;
-            boardV1 = (r.v0() + 1.7f) / 16.0f;
+            boardU0 = (r.u0() + 1.3f) / 16.0f;
+            boardV0 = y0;
+            boardU1 = (r.u0() + 1.7f) / 16.0f;
+            boardV1 = y1;
 
             spineU0 = x0;
             spineV0 = y0;
