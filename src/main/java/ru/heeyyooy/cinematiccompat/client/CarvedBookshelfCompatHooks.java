@@ -1,6 +1,5 @@
 package ru.heeyyooy.cinematiccompat.client;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.TextureAtlas;
@@ -34,59 +33,43 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 
 /**
- * Runtime compatibility for Carved Wood and its Every Compat variants.
+ * Compatibility for the Carved Wood crimson chiseled bookshelf.
  *
- * Carved Wood's slot models contain the authoritative front-face rectangles and
- * UV regions. The tables below are those model rectangles converted from model
- * coordinates (bottom-left origin) to the top-left coordinates used by
- * Cinematic Interactions' ShelfBooks.SPINES.
+ * Important: the occupied texture's book-art rectangles and the block model's
+ * UV rectangles are not interchangeable. These bounds describe the actual
+ * individual book artwork in chiseled_crimson_bookshelf_occupied.png.
  */
 public final class CarvedBookshelfCompatHooks {
     public static final int NOT_HANDLED = Integer.MIN_VALUE;
+
+    private static final ResourceLocation CRIMSON_SHELF =
+            ResourceLocation.fromNamespaceAndPath("carved_wood", "chiseled_crimson_bookshelf");
+    private static final String CRIMSON_TEXTURE =
+            "carved_wood:block/chiseled_crimson_bookshelf_occupied";
 
     private static final int[][] VANILLA_SPINES = {
             {1, 2, 5, 7}, {6, 1, 10, 7}, {11, 1, 15, 7},
             {1, 9, 5, 15}, {6, 10, 10, 15}, {11, 9, 15, 15}
     };
 
-    // Slot order is the BlockState property order: top_left, top_mid, top_right,
-    // bottom_left, bottom_mid, bottom_right. Each rectangle is u0, v0, u1, v1.
-    private static final int[][][] LAYOUTS = {
-            { // Type 1
-                    {0, 0, 6, 8}, {6, 0, 11, 8}, {11, 0, 16, 8},
-                    {0, 8, 6, 16}, {6, 8, 11, 16}, {11, 8, 16, 16}
-            },
-            { // Type 2
-                    {0, 0, 8, 8}, {8, 0, 12, 8}, {12, 0, 16, 8},
-                    {0, 8, 4, 16}, {4, 8, 8, 16}, {8, 8, 16, 16}
-            },
-            { // Type 3
-                    {0, 0, 8, 5}, {8, 0, 16, 5}, {0, 5, 8, 11},
-                    {8, 5, 16, 11}, {0, 11, 8, 16}, {8, 11, 16, 16}
-            },
-            { // Type 4
-                    {0, 0, 10, 5}, {10, 0, 16, 5}, {0, 5, 6, 11},
-                    {6, 5, 16, 11}, {0, 11, 10, 16}, {10, 11, 16, 16}
-            },
-            { // Type 5
-                    {0, 0, 8, 4}, {0, 4, 8, 8}, {8, 0, 16, 8},
-                    {0, 8, 8, 16}, {8, 8, 16, 12}, {8, 12, 16, 16}
-            },
-            { // Type 6
-                    {0, 0, 8, 6}, {8, 0, 16, 6}, {0, 6, 8, 11},
-                    {8, 6, 16, 11}, {0, 11, 8, 16}, {8, 11, 16, 16}
-            },
-            { // Type 7
-                    {0, 0, 5, 5}, {5, 0, 11, 11}, {11, 0, 16, 5},
-                    {0, 5, 5, 16}, {5, 11, 11, 16}, {11, 5, 16, 16}
-            },
-            { // Type 8
-                    {0, 0, 6, 10}, {6, 0, 11, 9}, {11, 0, 16, 7},
-                    {0, 10, 6, 16}, {6, 9, 11, 16}, {11, 7, 16, 16}
-            }
+    /*
+     * Actual coloured book bounds in Carved Wood's crimson occupied texture.
+     * Order follows SLOT_OCCUPIED_PROPERTIES: top-left, top-mid, top-right,
+     * bottom-left, bottom-mid, bottom-right.
+     *
+     * These are deliberately different from the large UV rectangles used by
+     * the six flat book planes in the block's JSON models.
+     */
+    private static final int[][] CRIMSON_SPINES = {
+            {4, 1, 6, 5},
+            {11, 1, 15, 5},
+            {2, 7, 5, 11},
+            {8, 7, 14, 11},
+            {1, 12, 8, 16},
+            {11, 12, 15, 16}
     };
 
-    private record SlotRect(int u0, int v0, int u1, int v1) {
+    private record SpineRect(int u0, int v0, int u1, int v1) {
         int width() {
             return u1 - u0;
         }
@@ -98,13 +81,9 @@ public final class CarvedBookshelfCompatHooks {
         boolean horizontal() {
             return width() > height();
         }
-
-        int[] asArray() {
-            return new int[]{u0, v0, u1, v1};
-        }
     }
 
-    private record ShelfContext(ResourceLocation blockId, SlotRect rect, String texture) {
+    private record ShelfContext(SpineRect spine) {
     }
 
     private static final ThreadLocal<ShelfContext> CURRENT = new ThreadLocal<>();
@@ -123,97 +102,53 @@ public final class CarvedBookshelfCompatHooks {
     }
 
     private static boolean isSupportedBlock(Block block) {
-        if (!(block instanceof ChiseledBookShelfBlock)) {
-            return false;
-        }
-
-        ResourceLocation id = BuiltInRegistries.BLOCK.getKey(block);
-        if (id == null) {
-            return false;
-        }
-
-        String path = id.getPath();
-        boolean bookshelfPath = path.contains("chiseled_") && path.endsWith("_bookshelf");
-        return bookshelfPath && (id.getNamespace().equals("carved_wood")
-                || id.getNamespace().equals("everycomp") && path.startsWith("crwo/"));
+        return CRIMSON_SHELF.equals(BuiltInRegistries.BLOCK.getKey(block))
+                && block instanceof ChiseledBookShelfBlock;
     }
 
-    private static int layoutType(Block block) {
-        for (Class<?> type = block.getClass(); type != null; type = type.getSuperclass()) {
-            String name = type.getSimpleName();
-            String marker = "CWChiseledBookShelfBlockType";
-            int index = name.lastIndexOf(marker);
-            if (index >= 0 && index + marker.length() < name.length()) {
-                char digit = name.charAt(index + marker.length());
-                if (digit >= '1' && digit <= '8') {
-                    return digit - '0';
-                }
-            }
-        }
-        // Every Compat creates its Carved Wood variants with Type1.
-        return 1;
-    }
-
-    private static SlotRect rect(BlockState state, int slot) {
-        if (!isSupportedShelf(state) || slot < 0 || slot >= 6) {
+    private static SpineRect rect(int slot) {
+        if (slot < 0 || slot >= CRIMSON_SPINES.length) {
             return null;
         }
-        int type = layoutType(state.getBlock());
-        int[] values = LAYOUTS[type - 1][slot];
-        return new SlotRect(values[0], values[1], values[2], values[3]);
-    }
-
-    private static ResourceLocation occupiedTexture(ResourceLocation blockId) {
-        String path = "block/" + blockId.getPath() + "_occupied";
-        if (blockId.getNamespace().equals("everycomp")) {
-            path += "_m";
-        }
-        return ResourceLocation.fromNamespaceAndPath(blockId.getNamespace(), path);
+        int[] values = CRIMSON_SPINES[slot];
+        return new SpineRect(values[0], values[1], values[2], values[3]);
     }
 
     private static ShelfContext context(BlockPos pos, int slot) {
         Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.level == null || pos == null) {
+        if (minecraft.level == null || pos == null
+                || !isSupportedShelf(minecraft.level.getBlockState(pos))) {
             CURRENT.remove();
             return null;
         }
 
-        BlockState state = minecraft.level.getBlockState(pos);
-        SlotRect rect = rect(state, slot);
+        SpineRect rect = rect(slot);
         if (rect == null) {
             CURRENT.remove();
             return null;
         }
 
-        ResourceLocation id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
-        ShelfContext context = new ShelfContext(id, rect, occupiedTexture(id).toString());
+        ShelfContext context = new ShelfContext(rect);
         CURRENT.set(context);
         return context;
     }
 
     public static int[][] spinesFor(BlockPos pos) {
         Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.level == null || pos == null) {
+        if (minecraft.level == null || pos == null
+                || !isSupportedShelf(minecraft.level.getBlockState(pos))) {
             return VANILLA_SPINES;
         }
-        return spinesFor(minecraft.level.getBlockState(pos));
+
+        int[][] copy = new int[CRIMSON_SPINES.length][];
+        for (int i = 0; i < CRIMSON_SPINES.length; i++) {
+            copy[i] = CRIMSON_SPINES[i].clone();
+        }
+        return copy;
     }
 
     public static int[][] spinesForCurrentScene() {
         return spinesFor(CinematicCompatClientHooks.currentScenePos());
-    }
-
-    private static int[][] spinesFor(BlockState state) {
-        if (!isSupportedShelf(state)) {
-            return VANILLA_SPINES;
-        }
-
-        int[][] source = LAYOUTS[layoutType(state.getBlock()) - 1];
-        int[][] copy = new int[source.length][];
-        for (int i = 0; i < source.length; i++) {
-            copy[i] = source[i].clone();
-        }
-        return copy;
     }
 
     public static int slotAt(BlockPos pos, Direction facing, Vec3 point) {
@@ -237,9 +172,8 @@ public final class CarvedBookshelfCompatHooks {
             return -1;
         }
 
-        int[][] slots = LAYOUTS[layoutType(state.getBlock()) - 1];
-        for (int i = 0; i < slots.length; i++) {
-            int[] r = slots[i];
+        for (int i = 0; i < CRIMSON_SPINES.length; i++) {
+            int[] r = CRIMSON_SPINES[i];
             if (u >= r[0] - 0.001 && u <= r[2] + 0.001
                     && v >= r[1] - 0.001 && v <= r[3] + 0.001) {
                 context(pos, i);
@@ -249,13 +183,14 @@ public final class CarvedBookshelfCompatHooks {
         return -1;
     }
 
+    /** Position of the centre of the actual spine artwork on the shelf face. */
     public static Vec3 spine(BlockPos pos, Direction facing, int slot) {
         ShelfContext context = context(pos, slot);
         if (context == null) {
             return null;
         }
 
-        SlotRect r = context.rect();
+        SpineRect r = context.spine();
         Vec3 normal = Vec3.atLowerCornerOf(facing.getNormal());
         Vec3 right = Vec3.atLowerCornerOf(facing.getCounterClockWise().getNormal());
         double u = (r.u0() + r.u1()) / 2.0;
@@ -268,8 +203,8 @@ public final class CarvedBookshelfCompatHooks {
     }
 
     /**
-     * Builds Cinematic Interactions' private ShelfBooks.Pose without linking
-     * against the optional target mod at compile time.
+     * Creates Cinematic Interactions' ShelfBooks.Pose by reflection so this
+     * compatibility add-on does not require a compile-time dependency on it.
      */
     public static Object inSlot(BlockPos pos, Direction facing, int slot, double out) {
         ShelfContext context = context(pos, slot);
@@ -277,7 +212,7 @@ public final class CarvedBookshelfCompatHooks {
             return null;
         }
 
-        SlotRect r = context.rect();
+        SpineRect r = context.spine();
         boolean horizontal = r.horizontal();
 
         double deep = staticDouble("dev.dyslexic.cinematic.client.OpenBook", "DEEP", 0.421);
@@ -296,8 +231,6 @@ public final class CarvedBookshelfCompatHooks {
         Vec3 right = Vec3.atLowerCornerOf(facing.getCounterClockWise().getNormal());
         Vec3 up = new Vec3(0.0, 1.0, 0.0);
 
-        // A horizontal book is laid on its side: its long axis follows the
-        // shelf horizontally, while its spine thickness follows world-up.
         Vec3 bookUp = horizontal ? right.scale(-1.0) : up;
         Vec3 bookRight = horizontal ? up : right;
 
@@ -312,30 +245,24 @@ public final class CarvedBookshelfCompatHooks {
                     (float) bookRight.x, (float) bookRight.y, (float) bookRight.z
             ).getNormalizedRotation(new Quaternionf());
 
-            Constructor<?> constructor = poseConstructor();
-            return constructor.newInstance(origin, turn, size, 1.0);
+            return poseConstructor().newInstance(origin, turn, size, 1.0);
         } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
             return null;
         }
     }
 
     /**
-     * Reuses the exact occupied-texture UV rectangle from the Carved Wood
-     * slot model, and extracts the narrow spine edge from that rectangle.
+     * Uses only the individual book's pixels for its cover and spine. The
+     * previous implementation sampled the whole model UV tile, making the
+     * hovering book display a large fragment of the bookshelf texture.
      */
     public static Object look(int slot) {
         ShelfContext context = CURRENT.get();
-        if (context == null || slot < 0 || slot >= 6) {
+        if (context == null || slot < 0 || slot >= CRIMSON_SPINES.length) {
             return null;
         }
 
-        Block block = BuiltInRegistries.BLOCK.get(context.blockId());
-        if (!isSupportedBlock(block)) {
-            CURRENT.remove();
-            return null;
-        }
-        int[] values = LAYOUTS[layoutType(block) - 1][slot];
-        SlotRect r = new SlotRect(values[0], values[1], values[2], values[3]);
+        SpineRect r = context.spine();
         float u0 = r.u0() / 16.0f;
         float v0 = r.v0() / 16.0f;
         float u1 = r.u1() / 16.0f;
@@ -347,30 +274,25 @@ public final class CarvedBookshelfCompatHooks {
         float sv1;
         if (r.horizontal()) {
             su0 = u0;
-            sv0 = (r.v0() + 0.3f) / 16.0f;
+            sv0 = (r.v0() + 1.3f) / 16.0f;
             su1 = u1;
-            sv1 = (r.v0() + 0.7f) / 16.0f;
+            sv1 = (r.v0() + 1.7f) / 16.0f;
         } else {
-            su0 = (r.u0() + 0.3f) / 16.0f;
+            su0 = (r.u0() + 1.3f) / 16.0f;
             sv0 = v0;
-            su1 = (r.u0() + 0.7f) / 16.0f;
+            su1 = (r.u0() + 1.7f) / 16.0f;
             sv1 = v1;
         }
 
         try {
-            Constructor<?> constructor = lookConstructor();
-            return constructor.newInstance(context.texture(), u0, v0, u1, v1, su0, sv0, su1, sv1);
+            return lookConstructor().newInstance(CRIMSON_TEXTURE,
+                    u0, v0, u1, v1, su0, sv0, su1, sv1);
         } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
             return null;
         }
     }
 
-    /**
-     * Resolves book-cover textures without discarding their namespace.
-     * Cinematic Interactions' Fx.sprite(String) treats every value as a
-     * minecraft-relative path, so namespaced Carved Wood textures must be
-     * resolved directly from the block atlas.
-     */
+    /** Resolve a resource location with its real namespace, rather than minecraft by default. */
     public static TextureAtlasSprite sprite(String texture) {
         ResourceLocation location = ResourceLocation.tryParse(texture);
         if (location == null) {
@@ -383,24 +305,11 @@ public final class CarvedBookshelfCompatHooks {
 
     public static boolean isCurrentBookHorizontal() {
         ShelfContext context = CURRENT.get();
-        return context != null && context.rect().horizontal();
+        return context != null && context.spine().horizontal();
     }
 
-    /**
-     * Rotates the four UV corners by 90 degrees. The geometry mixin uses the
-     * same rotation for the board and spine so the texture follows horizontal
-     * books instead of being stretched across the wrong axis.
-     */
     public static float[] rotateUvs(float[] original) {
-        if (!isCurrentBookHorizontal() || original == null || original.length != 8) {
-            return original;
-        }
-        return new float[]{
-                original[6], original[7],
-                original[0], original[1],
-                original[2], original[3],
-                original[4], original[5]
-        };
+        return original;
     }
 
     public static void clearContext() {
@@ -446,26 +355,16 @@ public final class CarvedBookshelfCompatHooks {
         }
     }
 
-    /**
-     * Called after Cinematic Interactions wraps the vanilla shelf models.
-     * This adds equivalent wrappers for Carved Wood and Every Compat block
-     * states so the static spine disappears while its animated book is out.
-     */
+    /** Extends Cinematic Interactions' hidden-slot model wrapper to this shelf only. */
     public static void wrapModels(ModelEvent.ModifyBakingResult event) {
         Map<ModelResourceLocation, BakedModel> models = event.getModels();
         IdentityHashMap<BakedModel, BakedModel> wrapped = new IdentityHashMap<>();
 
-        for (Block block : BuiltInRegistries.BLOCK) {
-            if (!isSupportedBlock(block)) {
-                continue;
-            }
-
-            for (BlockState state : block.getStateDefinition().getPossibleStates()) {
-                ModelResourceLocation key = BlockModelShaper.stateToModelLocation(state);
-                BakedModel model = models.get(key);
-                if (model != null) {
-                    models.put(key, wrapped.computeIfAbsent(model, CarvedBookshelfEmptiedModel::new));
-                }
+        for (BlockState state : BuiltInRegistries.BLOCK.get(CRIMSON_SHELF).getStateDefinition().getPossibleStates()) {
+            ModelResourceLocation key = BlockModelShaper.stateToModelLocation(state);
+            BakedModel model = models.get(key);
+            if (model != null) {
+                models.put(key, wrapped.computeIfAbsent(model, CarvedBookshelfEmptiedModel::new));
             }
         }
     }
