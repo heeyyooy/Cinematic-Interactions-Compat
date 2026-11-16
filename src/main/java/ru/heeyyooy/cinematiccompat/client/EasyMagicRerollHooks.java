@@ -27,10 +27,11 @@ public final class EasyMagicRerollHooks {
     private static volatile double rerollDeniedAt = -10.0;
     // Keep 80% of the original violet rune and 85% of the original blue rune.
     private static final double VIOLET_SOCKET_REDUCTION = 0.20;
-    private static final double BLUE_PERIMETER_REDUCTION = 0.15;
+    private static final double BLUE_PERIMETER_RADIUS = 0.11;
     private static final double VIOLET_SOCKET_RADIUS = 0.10 * (1.0 - VIOLET_SOCKET_REDUCTION);
-    private static final double BLUE_PERIMETER_RADIUS = 0.115 * (1.0 - BLUE_PERIMETER_REDUCTION);
-    private static final double BLUE_GLOW_SCALE = 1.0 - BLUE_PERIMETER_REDUCTION;
+    private static final double BLUE_GLOW_SCALE = BLUE_PERIMETER_RADIUS / 0.115;
+    private static final double CLOCK_CENTER_LEFT_OFFSET = 0.012;
+    private static final double CLOCK_CENTER_AWAY_OFFSET = 0.012;
     private static final double SOCKET_CIRCLE_LIFT = 0.016;
     private static final double OUTER_CIRCLE_LIFT = 0.012;
     private static final float CLOCK_MODEL_SCALE = 0.713f;
@@ -535,6 +536,22 @@ public final class EasyMagicRerollHooks {
         return position.add(right.scale(offset));
     }
 
+    /**
+     * Corrects the baked clock item's slight right/down visual bias relative to
+     * its surface anchor. Shift it left and away from the player while keeping
+     * the rune circles at their original shared center.
+     */
+    public static Vec3 clockModelPosition(Vec3 runeCenter, Direction facing) {
+        if (runeCenter == null || facing == null) {
+            return runeCenter;
+        }
+        Vec3 right = Vec3.atLowerCornerOf(facing.getOpposite().getClockWise().getNormal());
+        Vec3 towardsPlayer = Vec3.atLowerCornerOf(facing.getNormal());
+        return runeCenter
+                .subtract(right.scale(CLOCK_CENTER_LEFT_OFFSET))
+                .subtract(towardsPlayer.scale(CLOCK_CENTER_AWAY_OFFSET));
+    }
+
     /** The clock grows in during intro and shrinks away during outro. */
     private static float clockPresence() {
         return switch (scenePhase()) {
@@ -671,7 +688,7 @@ public final class EasyMagicRerollHooks {
                         buffers,
                         cameraPos,
                         new ItemStack(Items.CLOCK),
-                        visualPosition.add(0.0, 0.009, 0.0),
+                        clockModelPosition(visualPosition, facing).add(0.0, 0.009, 0.0),
                         facing == null ? Direction.NORTH : facing,
                         0x5245524F4C4CL,
                         CLOCK_MODEL_SCALE * clockScale * hoverScale,

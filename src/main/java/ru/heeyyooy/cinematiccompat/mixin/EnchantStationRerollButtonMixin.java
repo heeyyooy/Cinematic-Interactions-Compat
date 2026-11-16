@@ -75,12 +75,12 @@ public abstract class EnchantStationRerollButtonMixin {
         Vec3 button = this.cinematiccompat$rerollPosition();
         Direction side = EasyMagicRerollHooks.stationSide(this);
         Vec3 right = Vec3.atLowerCornerOf(side.getOpposite().getClockWise().getNormal());
-        // Make the hit target a little wider and shift its centre left of the token
-        // so it is easier to pick without moving the visible item.
-        Vec3 hitCenter = button.subtract(right.scale(0.035));
+        Vec3 clockCenter = EasyMagicRerollHooks.clockModelPosition(button, side);
+        // Keep the wider hit target centred on the corrected visible clock position.
+        Vec3 hitCenter = clockCenter.subtract(right.scale(0.035));
         if (EasyMagicRerollHooks.isCursorOver(hitCenter, 0.18)) {
             this.cinematiccompat$hoveringReroll = true;
-            EasyMagicRerollHooks.setAim(this, button);
+            EasyMagicRerollHooks.setAim(this, clockCenter);
             this.aimAir = true;
         }
     }
@@ -98,8 +98,11 @@ public abstract class EnchantStationRerollButtonMixin {
         }
 
         Vec3 buttonPosition = this.cinematiccompat$rerollPosition();
-        // Keep the working hand aimed at the token for the press animation.
-        EasyMagicRerollHooks.setAim(this, buttonPosition);
+        Vec3 clockCenter = EasyMagicRerollHooks.clockModelPosition(
+                buttonPosition,
+                EasyMagicRerollHooks.stationSide(this));
+        // Keep the working hand aimed at the visible centre of the token.
+        EasyMagicRerollHooks.setAim(this, clockCenter);
         this.aimAir = true;
         EasyMagicRerollHooks.tapHand();
 
