@@ -353,6 +353,8 @@ public final class CarvedBookshelfCompatHooks {
             return constructor.newInstance(context.texture(), u0, v0, u1, v1, su0, sv0, su1, sv1);
         } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
             return null;
+        } finally {
+            CURRENT.remove();
         }
     }
 
