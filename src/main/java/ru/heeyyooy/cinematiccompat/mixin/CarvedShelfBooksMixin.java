@@ -2,11 +2,14 @@ package ru.heeyyooy.cinematiccompat.mixin;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import ru.heeyyooy.cinematiccompat.client.CarvedBookshelfCompatHooks;
 
@@ -38,5 +41,14 @@ public abstract class CarvedShelfBooksMixin {
         if (look != null) {
             cir.setReturnValue(look);
         }
+    }
+
+    @Redirect(
+            method = {"cue", "renderAll"},
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/state/BlockState;is(Lnet/minecraft/world/level/block/Block;)Z"),
+            remap = false
+    )
+    private static boolean cinematiccompat$recognizeCarvedBookshelves(BlockState state, Block expected) {
+        return CarvedBookshelfCompatHooks.shelfCheck(state, expected);
     }
 }
