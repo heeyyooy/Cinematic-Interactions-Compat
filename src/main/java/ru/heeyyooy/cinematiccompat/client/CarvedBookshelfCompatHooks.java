@@ -2,10 +2,10 @@ package ru.heeyyooy.cinematiccompat.client;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.texture.TextureAtlas;
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.renderer.block.BlockModelShaper;
 import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.core.BlockPos;
@@ -33,41 +33,88 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 
 /**
- * Compatibility for the Carved Wood crimson chiseled bookshelf.
+ * Runtime compatibility for selected Carved Wood chiseled bookshelves.
  *
- * Important: the occupied texture's book-art rectangles and the block model's
- * UV rectangles are not interchangeable. These bounds describe the actual
- * individual book artwork in chiseled_crimson_bookshelf_occupied.png.
+ * Rectangle coordinates are texture pixel edges (right/bottom exclusive).
+ * The supplied hand-marked bottom-right pixel is inclusive, so its edge is
+ * stored as coordinate + 1. The Carved Wood slot templates use matching
+ * geometry and UV dimensions for these block variants.
  */
 public final class CarvedBookshelfCompatHooks {
     public static final int NOT_HANDLED = Integer.MIN_VALUE;
-
-    private static final ResourceLocation CRIMSON_SHELF =
-            ResourceLocation.fromNamespaceAndPath("carved_wood", "chiseled_crimson_bookshelf");
-    private static final String CRIMSON_TEXTURE =
-            "carved_wood:block/chiseled_crimson_bookshelf_occupied";
 
     private static final int[][] VANILLA_SPINES = {
             {1, 2, 5, 7}, {6, 1, 10, 7}, {11, 1, 15, 7},
             {1, 9, 5, 15}, {6, 10, 10, 15}, {11, 9, 15, 15}
     };
 
+    private static final ResourceLocation CRIMSON_ID =
+            ResourceLocation.fromNamespaceAndPath("carved_wood", "chiseled_crimson_bookshelf");
+    private static final ResourceLocation ACACIA_ID =
+            ResourceLocation.fromNamespaceAndPath("carved_wood", "chiseled_acacia_bookshelf");
+    private static final ResourceLocation BAMBOO_ID =
+            ResourceLocation.fromNamespaceAndPath("carved_wood", "chiseled_bamboo_bookshelf");
+    private static final ResourceLocation BIRCH_ID =
+            ResourceLocation.fromNamespaceAndPath("carved_wood", "chiseled_birch_bookshelf");
+
+    private record ShelfDefinition(ResourceLocation id, String texture, int[][] rectangles) {
+    }
+
     /*
-     * Actual coloured book bounds in Carved Wood's crimson occupied texture.
-     * Order follows SLOT_OCCUPIED_PROPERTIES: top-left, top-mid, top-right,
-     * bottom-left, bottom-mid, bottom-right.
+     * Existing crimson values are intentionally preserved in this iteration.
+     * New values are the user's inclusive pixel coordinates converted to
+     * exclusive right/bottom edges.
      *
-     * These are deliberately different from the large UV rectangles used by
-     * the six flat book planes in the block's JSON models.
+     * Slot order: top-left, top-mid, top-right, bottom-left, bottom-mid,
+     * bottom-right. This is also slot_0_occupied through slot_5_occupied in
+     * Carved Wood's generated blockstates.
      */
-    private static final int[][] CRIMSON_SPINES = {
-            {4, 1, 6, 5},
-            {11, 1, 15, 5},
-            {2, 7, 5, 11},
-            {8, 7, 14, 11},
-            {1, 12, 8, 16},
-            {11, 12, 15, 16}
-    };
+    private static final Map<ResourceLocation, ShelfDefinition> SHELVES = Map.of(
+            CRIMSON_ID, new ShelfDefinition(
+                    CRIMSON_ID,
+                    "carved_wood:block/chiseled_crimson_bookshelf_occupied",
+                    new int[][]{
+                            {4, 1, 6, 5},
+                            {11, 1, 15, 5},
+                            {2, 7, 5, 11},
+                            {8, 7, 14, 11},
+                            {1, 12, 8, 16},
+                            {11, 12, 15, 16}
+                    }),
+            ACACIA_ID, new ShelfDefinition(
+                    ACACIA_ID,
+                    "carved_wood:block/chiseled_acacia_bookshelf_occupied",
+                    new int[][]{
+                            {1, 2, 7, 5},
+                            {8, 1, 15, 5},
+                            {1, 7, 8, 10},
+                            {10, 7, 15, 10},
+                            {1, 11, 7, 15},
+                            {9, 12, 15, 15}
+                    }),
+            BAMBOO_ID, new ShelfDefinition(
+                    BAMBOO_ID,
+                    "carved_wood:block/chiseled_bamboo_bookshelf_occupied",
+                    new int[][]{
+                            {1, 2, 5, 9},
+                            {7, 1, 11, 6},
+                            {12, 2, 15, 6},
+                            {1, 10, 5, 15},
+                            {6, 10, 9, 15},
+                            {11, 9, 15, 15}
+                    }),
+            BIRCH_ID, new ShelfDefinition(
+                    BIRCH_ID,
+                    "carved_wood:block/chiseled_birch_bookshelf_occupied",
+                    new int[][]{
+                            {2, 1, 6, 7},
+                            {9, 1, 12, 7},
+                            {12, 2, 15, 7},
+                            {1, 10, 4, 15},
+                            {4, 11, 7, 15},
+                            {10, 9, 14, 15}
+                    })
+    );
 
     private record SpineRect(int u0, int v0, int u1, int v1) {
         int width() {
@@ -83,7 +130,7 @@ public final class CarvedBookshelfCompatHooks {
         }
     }
 
-    private record ShelfContext(SpineRect spine) {
+    private record ShelfContext(ShelfDefinition shelf, SpineRect spine) {
     }
 
     private static final ThreadLocal<ShelfContext> CURRENT = new ThreadLocal<>();
@@ -98,51 +145,59 @@ public final class CarvedBookshelfCompatHooks {
     }
 
     public static boolean isSupportedShelf(BlockState state) {
-        return state != null && isSupportedBlock(state.getBlock());
+        return state != null && shelfDefinition(state.getBlock()) != null;
     }
 
-    private static boolean isSupportedBlock(Block block) {
-        return CRIMSON_SHELF.equals(BuiltInRegistries.BLOCK.getKey(block))
-                && block instanceof ChiseledBookShelfBlock;
-    }
-
-    private static SpineRect rect(int slot) {
-        if (slot < 0 || slot >= CRIMSON_SPINES.length) {
+    private static ShelfDefinition shelfDefinition(Block block) {
+        if (!(block instanceof ChiseledBookShelfBlock)) {
             return null;
         }
-        int[] values = CRIMSON_SPINES[slot];
+        ResourceLocation id = BuiltInRegistries.BLOCK.getKey(block);
+        return id == null ? null : SHELVES.get(id);
+    }
+
+    private static SpineRect rect(ShelfDefinition shelf, int slot) {
+        if (shelf == null || slot < 0 || slot >= shelf.rectangles().length) {
+            return null;
+        }
+        int[] values = shelf.rectangles()[slot];
         return new SpineRect(values[0], values[1], values[2], values[3]);
     }
 
     private static ShelfContext context(BlockPos pos, int slot) {
         Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.level == null || pos == null
-                || !isSupportedShelf(minecraft.level.getBlockState(pos))) {
+        if (minecraft.level == null || pos == null) {
             CURRENT.remove();
             return null;
         }
 
-        SpineRect rect = rect(slot);
-        if (rect == null) {
+        ShelfDefinition shelf = shelfDefinition(minecraft.level.getBlockState(pos).getBlock());
+        SpineRect spine = rect(shelf, slot);
+        if (spine == null) {
             CURRENT.remove();
             return null;
         }
 
-        ShelfContext context = new ShelfContext(rect);
+        ShelfContext context = new ShelfContext(shelf, spine);
         CURRENT.set(context);
         return context;
     }
 
     public static int[][] spinesFor(BlockPos pos) {
         Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.level == null || pos == null
-                || !isSupportedShelf(minecraft.level.getBlockState(pos))) {
+        if (minecraft.level == null || pos == null) {
             return VANILLA_SPINES;
         }
 
-        int[][] copy = new int[CRIMSON_SPINES.length][];
-        for (int i = 0; i < CRIMSON_SPINES.length; i++) {
-            copy[i] = CRIMSON_SPINES[i].clone();
+        ShelfDefinition shelf = shelfDefinition(minecraft.level.getBlockState(pos).getBlock());
+        if (shelf == null) {
+            return VANILLA_SPINES;
+        }
+
+        int[][] source = shelf.rectangles();
+        int[][] copy = new int[source.length][];
+        for (int i = 0; i < source.length; i++) {
+            copy[i] = source[i].clone();
         }
         return copy;
     }
@@ -158,7 +213,8 @@ public final class CarvedBookshelfCompatHooks {
         }
 
         BlockState state = minecraft.level.getBlockState(pos);
-        if (!isSupportedShelf(state)) {
+        ShelfDefinition shelf = shelfDefinition(state.getBlock());
+        if (shelf == null) {
             return NOT_HANDLED;
         }
 
@@ -172,8 +228,8 @@ public final class CarvedBookshelfCompatHooks {
             return -1;
         }
 
-        for (int i = 0; i < CRIMSON_SPINES.length; i++) {
-            int[] r = CRIMSON_SPINES[i];
+        for (int i = 0; i < shelf.rectangles().length; i++) {
+            int[] r = shelf.rectangles()[i];
             if (u >= r[0] - 0.001 && u <= r[2] + 0.001
                     && v >= r[1] - 0.001 && v <= r[3] + 0.001) {
                 context(pos, i);
@@ -183,7 +239,7 @@ public final class CarvedBookshelfCompatHooks {
         return -1;
     }
 
-    /** Position of the centre of the actual spine artwork on the shelf face. */
+    /** Position of the centre of the visible book artwork on the shelf face. */
     public static Vec3 spine(BlockPos pos, Direction facing, int slot) {
         ShelfContext context = context(pos, slot);
         if (context == null) {
@@ -252,41 +308,74 @@ public final class CarvedBookshelfCompatHooks {
     }
 
     /**
-     * Uses only the individual book's pixels for its cover and spine. The
-     * previous implementation sampled the whole model UV tile, making the
-     * hovering book display a large fragment of the bookshelf texture.
+     * For the three new shelves, the board UV samples a narrow strip from the
+     * book cover while the spine UV uses the complete book-art rectangle.
+     * This matches the convention used by vanilla ShelfBooks.look().
+     * Crimson intentionally retains the previous test implementation.
      */
     public static Object look(int slot) {
         ShelfContext context = CURRENT.get();
-        if (context == null || slot < 0 || slot >= CRIMSON_SPINES.length) {
+        if (context == null || slot < 0 || slot >= context.shelf().rectangles().length) {
             return null;
         }
 
         SpineRect r = context.spine();
-        float u0 = r.u0() / 16.0f;
-        float v0 = r.v0() / 16.0f;
-        float u1 = r.u1() / 16.0f;
-        float v1 = r.v1() / 16.0f;
+        float x0 = r.u0() / 16.0f;
+        float y0 = r.v0() / 16.0f;
+        float x1 = r.u1() / 16.0f;
+        float y1 = r.v1() / 16.0f;
 
-        float su0;
-        float sv0;
-        float su1;
-        float sv1;
-        if (r.horizontal()) {
-            su0 = u0;
-            sv0 = (r.v0() + 1.3f) / 16.0f;
-            su1 = u1;
-            sv1 = (r.v0() + 1.7f) / 16.0f;
+        float boardU0;
+        float boardV0;
+        float boardU1;
+        float boardV1;
+        float spineU0;
+        float spineV0;
+        float spineU1;
+        float spineV1;
+
+        if (context.shelf().id().equals(CRIMSON_ID)) {
+            // Keep the first crimson test's UV selection unchanged.
+            boardU0 = x0;
+            boardV0 = y0;
+            boardU1 = x1;
+            boardV1 = y1;
+            if (r.horizontal()) {
+                spineU0 = x0;
+                spineV0 = (r.v0() + 0.3f) / 16.0f;
+                spineU1 = x1;
+                spineV1 = (r.v0() + 0.7f) / 16.0f;
+            } else {
+                spineU0 = (r.u0() + 0.3f) / 16.0f;
+                spineV0 = y0;
+                spineU1 = (r.u0() + 0.7f) / 16.0f;
+                spineV1 = y1;
+            }
         } else {
-            su0 = (r.u0() + 1.3f) / 16.0f;
-            sv0 = v0;
-            su1 = (r.u0() + 1.7f) / 16.0f;
-            sv1 = v1;
+            // Covers sample a thin strip from inside the book's spine edge.
+            if (r.horizontal()) {
+                boardU0 = x0;
+                boardV0 = (r.v0() + 1.3f) / 16.0f;
+                boardU1 = x1;
+                boardV1 = (r.v0() + 1.7f) / 16.0f;
+            } else {
+                boardU0 = (r.u0() + 1.3f) / 16.0f;
+                boardV0 = y0;
+                boardU1 = (r.u0() + 1.7f) / 16.0f;
+                boardV1 = y1;
+            }
+
+            // The complete sprite region is mapped onto the narrow 3D spine.
+            spineU0 = x0;
+            spineV0 = y0;
+            spineU1 = x1;
+            spineV1 = y1;
         }
 
         try {
-            return lookConstructor().newInstance(CRIMSON_TEXTURE,
-                    u0, v0, u1, v1, su0, sv0, su1, sv1);
+            return lookConstructor().newInstance(context.shelf().texture(),
+                    boardU0, boardV0, boardU1, boardV1,
+                    spineU0, spineV0, spineU1, spineV1);
         } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
             return null;
         }
@@ -355,16 +444,23 @@ public final class CarvedBookshelfCompatHooks {
         }
     }
 
-    /** Extends Cinematic Interactions' hidden-slot model wrapper to this shelf only. */
+    /** Extends Cinematic Interactions' hidden-slot model wrapper to selected Carved Wood shelves. */
     public static void wrapModels(ModelEvent.ModifyBakingResult event) {
         Map<ModelResourceLocation, BakedModel> models = event.getModels();
         IdentityHashMap<BakedModel, BakedModel> wrapped = new IdentityHashMap<>();
 
-        for (BlockState state : BuiltInRegistries.BLOCK.get(CRIMSON_SHELF).getStateDefinition().getPossibleStates()) {
-            ModelResourceLocation key = BlockModelShaper.stateToModelLocation(state);
-            BakedModel model = models.get(key);
-            if (model != null) {
-                models.put(key, wrapped.computeIfAbsent(model, CarvedBookshelfEmptiedModel::new));
+        for (ResourceLocation id : SHELVES.keySet()) {
+            Block block = BuiltInRegistries.BLOCK.get(id);
+            if (!(block instanceof ChiseledBookShelfBlock)) {
+                continue;
+            }
+
+            for (BlockState state : block.getStateDefinition().getPossibleStates()) {
+                ModelResourceLocation key = BlockModelShaper.stateToModelLocation(state);
+                BakedModel model = models.get(key);
+                if (model != null) {
+                    models.put(key, wrapped.computeIfAbsent(model, CarvedBookshelfEmptiedModel::new));
+                }
             }
         }
     }
