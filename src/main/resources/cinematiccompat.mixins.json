@@ -18,7 +18,8 @@
     "HandsTapRequestMixin",
     "CarvedShelfStationMixin",
     "CarvedShelfBooksMixin",
-    "CarvedShelfModelsMixin"
+    "CarvedShelfModelsMixin",
+    "CarvedOpenBookTextureMixin"
   ],
   "injectors": {
     "defaultRequire": 1
