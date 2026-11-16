@@ -418,8 +418,23 @@ public final class CarvedBookshelfCompatHooks {
         return context != null && context.spine().horizontal();
     }
 
+    /**
+     * Rotates the book-board UVs by one quarter-turn when its artwork is
+     * wider than it is tall. The physical book pose is already rotated by
+     * inSlot(); this applies the same turn to the texture on the broad covers.
+     * The narrow spine edge uses its separately selected UV strip and is not
+     * rotated here.
+     */
     public static float[] rotateUvs(float[] original) {
-        return original;
+        if (!isCurrentBookHorizontal() || original == null || original.length != 8) {
+            return original;
+        }
+        return new float[]{
+                original[6], original[7],
+                original[0], original[1],
+                original[2], original[3],
+                original[4], original[5]
+        };
     }
 
     public static void clearContext() {
