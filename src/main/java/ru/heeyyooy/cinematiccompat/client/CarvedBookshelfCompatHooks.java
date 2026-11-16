@@ -316,7 +316,16 @@ public final class CarvedBookshelfCompatHooks {
      */
     public static Object look(int slot) {
         BlockPos renderingPos = RENDERING_SHELF.get();
-        ShelfContext context = renderingPos == null ? CURRENT.get() : context(renderingPos, slot);
+        ShelfContext context;
+        if (renderingPos != null) {
+            context = context(renderingPos, slot);
+        } else {
+            context = CURRENT.get();
+            if (context == null) {
+                BlockPos activeShelf = CinematicCompatClientHooks.currentScenePos();
+                context = activeShelf == null ? null : context(activeShelf, slot);
+            }
+        }
         if (context == null || slot < 0 || slot >= context.shelf().rectangles().length) {
             return null;
         }
@@ -355,19 +364,18 @@ public final class CarvedBookshelfCompatHooks {
             }
         } else if (r.horizontal()) {
             /*
-             * A horizontal book lies cover-up in this bookshelf slot. Its
-             * entire artwork belongs on the broad 3D board. Only the bottom
-             * texture row is the narrow exposed fore-edge/spine. Previously
-             * these UVs were reversed: a tiny middle strip covered the board
-             * and the whole horizontal picture was stretched over the spine.
+             * On a horizontal book, the long texture axis (U) follows the
+             * book's long axis after boardUv() rotates its corners. The broad
+             * boards sample only a thin middle band of the book artwork;
+             * the narrow side/spine displays the complete horizontal image.
              */
             boardU0 = x0;
-            boardV0 = y0;
+            boardV0 = (r.v0() + 1.3f) / 16.0f;
             boardU1 = x1;
-            boardV1 = y1;
+            boardV1 = (r.v0() + 1.7f) / 16.0f;
 
             spineU0 = x0;
-            spineV0 = (r.v1() - 1.0f) / 16.0f;
+            spineV0 = y0;
             spineU1 = x1;
             spineV1 = y1;
         } else {
