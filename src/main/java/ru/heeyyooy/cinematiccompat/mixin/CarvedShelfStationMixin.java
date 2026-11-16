@@ -7,10 +7,11 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import ru.heeyyooy.cinematiccompat.client.CarvedBookshelfCompatHooks;
 
-/** Uses the real Carved Wood slot rectangles for cursor hit-testing. */
+/** Uses the real Carved Wood slot rectangles for cursor and hover geometry. */
 @Pseudo
 @Mixin(targets = "dev.dyslexic.cinematic.client.ShelfStation", remap = false)
 public abstract class CarvedShelfStationMixin {
@@ -21,5 +22,14 @@ public abstract class CarvedShelfStationMixin {
         if (slot != CarvedBookshelfCompatHooks.NOT_HANDLED) {
             cir.setReturnValue(slot);
         }
+    }
+
+    @Redirect(
+            method = "renderWorld",
+            at = @At(value = "FIELD", target = "Ldev/dyslexic/cinematic/client/ShelfBooks;SPINES:[[I", opcode = 178),
+            remap = false
+    )
+    private int[][] cinematiccompat$useCarvedHoverRectangles() {
+        return CarvedBookshelfCompatHooks.spinesForCurrentScene();
     }
 }
