@@ -12,7 +12,7 @@ import ru.heeyyooy.cinematiccompat.client.CarvedBookshelfCompatHooks;
 @Mixin(targets = "dev.dyslexic.cinematic.client.OpenBook", remap = false)
 public abstract class CarvedOpenBookTextureMixin {
     @Redirect(
-            method = {"drawCoverFace", "drawShut"},
+            method = {"drawCover", "drawCoverFace", "drawShut"},
             at = @At(
                     value = "INVOKE",
                     target = "Ldev/dyslexic/cinematic/client/Fx;sprite(Ljava/lang/String;)Lnet/minecraft/client/renderer/texture/TextureAtlasSprite;"
