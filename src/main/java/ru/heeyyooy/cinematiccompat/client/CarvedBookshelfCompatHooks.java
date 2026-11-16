@@ -240,6 +240,7 @@ public final class CarvedBookshelfCompatHooks {
             int[] r = slots[i];
             if (u >= r[0] - 0.001 && u <= r[2] + 0.001
                     && v >= r[1] - 0.001 && v <= r[3] + 0.001) {
+                context(pos, i);
                 return i;
             }
         }
@@ -326,7 +327,13 @@ public final class CarvedBookshelfCompatHooks {
             return null;
         }
 
-        SlotRect r = context.rect();
+        Block block = BuiltInRegistries.BLOCK.get(context.blockId());
+        if (!isSupportedBlock(block)) {
+            CURRENT.remove();
+            return null;
+        }
+        int[] values = LAYOUTS[layoutType(block) - 1][slot];
+        SlotRect r = new SlotRect(values[0], values[1], values[2], values[3]);
         float u0 = r.u0() / 16.0f;
         float v0 = r.v0() / 16.0f;
         float u1 = r.u1() / 16.0f;
@@ -353,8 +360,6 @@ public final class CarvedBookshelfCompatHooks {
             return constructor.newInstance(context.texture(), u0, v0, u1, v1, su0, sv0, su1, sv1);
         } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
             return null;
-        } finally {
-            CURRENT.remove();
         }
     }
 
