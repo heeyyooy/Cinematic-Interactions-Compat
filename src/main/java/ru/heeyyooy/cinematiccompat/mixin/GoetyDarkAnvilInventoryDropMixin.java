@@ -4,7 +4,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.Containers;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -18,7 +18,7 @@ import ru.heeyyooy.cinematiccompat.blockentity.GoetyDarkAnvilBlockEntity;
  * Drops stored items if a Goety dark anvil is actually removed.
  * Switching between normal/chipped/damaged variants keeps the same inventory.
  */
-@Mixin(Block.class)
+@Mixin(BlockBehaviour.class)
 public abstract class GoetyDarkAnvilInventoryDropMixin {
     @Inject(method = "onRemove", at = @At("HEAD"))
     private void cinematiccompat$dropInventoryWhenDarkAnvilIsRemoved(
