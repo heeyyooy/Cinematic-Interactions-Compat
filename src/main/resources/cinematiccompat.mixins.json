@@ -9,7 +9,11 @@
     "MenuActionsLecternDataMixin",
     "AmendmentsLecternEntityMixin",
     "GoetyDarkAnvilBlockMixin",
-    "GoetyDarkAnvilInventoryDropMixin"
+    "GoetyDarkAnvilInventoryDropMixin",
+    "ItemCombinerMenuAccessor",
+    "SlotContainerAccessor",
+    "GoetyDarkAnvilMenuMixin",
+    "ItemCombinerMenuPersistentAnvilMixin"
   ],
   "client": [
     "EnchantStationEasyMagicMixin",
@@ -23,10 +27,6 @@
     "CarvedShelfBooksMixin",
     "CarvedShelfModelsMixin",
     "CarvedOpenBookTextureMixin",
-    "ItemCombinerMenuAccessor",
-    "SlotContainerAccessor",
-    "GoetyDarkAnvilMenuMixin",
-    "ItemCombinerMenuPersistentAnvilMixin",
     "CombatRollHudMixin"
   ],
   "injectors": {

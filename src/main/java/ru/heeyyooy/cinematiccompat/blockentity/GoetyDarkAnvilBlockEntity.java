@@ -20,68 +20,51 @@ public final class GoetyDarkAnvilBlockEntity extends BlockEntity implements Cont
         super(GoetyDarkAnvilBlockEntities.DARK_ANVIL.get(), pos, state);
     }
 
-    @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+    @Override protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         ContainerHelper.loadAllItems(tag, this.items, registries);
     }
 
-    @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+    @Override protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         ContainerHelper.saveAllItems(tag, this.items, registries);
     }
 
-    @Override
-    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+    @Override public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         return this.saveWithoutMetadata(registries);
     }
 
-    @Override
-    public ClientboundBlockEntityDataPacket getUpdatePacket() {
+    @Override public ClientboundBlockEntityDataPacket getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
     }
 
-    @Override
-    public void setChanged() {
+    @Override public void setChanged() {
         super.setChanged();
         if (this.level != null) {
             this.level.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), 3);
         }
     }
 
-    public NonNullList<ItemStack> getItems() {
-        return this.items;
-    }
-
+    public NonNullList<ItemStack> getItems() { return this.items; }
     @Override public int getContainerSize() { return SLOT_COUNT; }
-
-    @Override
-    public boolean isEmpty() {
-        return this.items.stream().allMatch(ItemStack::isEmpty);
-    }
-
-    @Override
-    public ItemStack getItem(int slot) {
+    @Override public boolean isEmpty() { return this.items.stream().allMatch(ItemStack::isEmpty); }
+    @Override public ItemStack getItem(int slot) {
         return slot >= 0 && slot < SLOT_COUNT ? this.items.get(slot) : ItemStack.EMPTY;
     }
 
-    @Override
-    public ItemStack removeItem(int slot, int amount) {
+    @Override public ItemStack removeItem(int slot, int amount) {
         if (slot < 0 || slot >= SLOT_COUNT) return ItemStack.EMPTY;
         ItemStack result = ContainerHelper.removeItem(this.items, slot, amount);
         if (!result.isEmpty()) this.setChanged();
         return result;
     }
 
-    @Override
-    public ItemStack removeItemNoUpdate(int slot) {
+    @Override public ItemStack removeItemNoUpdate(int slot) {
         if (slot < 0 || slot >= SLOT_COUNT) return ItemStack.EMPTY;
         return ContainerHelper.takeItem(this.items, slot);
     }
 
-    @Override
-    public void setItem(int slot, ItemStack stack) {
+    @Override public void setItem(int slot, ItemStack stack) {
         if (slot < 0 || slot >= SLOT_COUNT) return;
         this.items.set(slot, stack);
         if (stack.getCount() > this.getMaxStackSize()) stack.setCount(this.getMaxStackSize());
@@ -91,11 +74,9 @@ public final class GoetyDarkAnvilBlockEntity extends BlockEntity implements Cont
     @Override public int getMaxStackSize() { return 64; }
     @Override public boolean stillValid(Player player) { return Container.stillValidBlockEntity(this, player); }
 
-    @Override
-    public void clearContent() {
-        this.items.clear();
-        this.items.add(ItemStack.EMPTY);
-        this.items.add(ItemStack.EMPTY);
+    @Override public void clearContent() {
+        this.items.set(0, ItemStack.EMPTY);
+        this.items.set(1, ItemStack.EMPTY);
         this.setChanged();
     }
 }
