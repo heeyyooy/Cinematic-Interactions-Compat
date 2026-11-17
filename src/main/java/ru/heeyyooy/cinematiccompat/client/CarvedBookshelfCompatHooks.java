@@ -525,6 +525,41 @@ public final class CarvedBookshelfCompatHooks {
      * before it calculates arm trajectories; the finished hand positions are
      * never swapped.
      */
+    /** Keeps the current hand mapping until the upstream hand-selection local can be targeted safely. */
+    public static Vec3[] correctWorkingHand(Object station, Vec3[] hands) {
+        if (station == null || hands == null || hands.length != 2) {
+            return hands;
+        }
+        try {
+            Object move = readField(station, "move");
+            String moveName = move == null ? "" : move.toString();
+            if (!"TAKE".equals(moveName) && !"PUT".equals(moveName)) {
+                return hands;
+            }
+            Object slotValue = readField(station, "moveSlot");
+            if (!(slotValue instanceof Number number) || number.intValue() < 0) {
+                return hands;
+            }
+            int slot = number.intValue();
+            Object posValue = readField(station, "pos");
+            BlockPos pos = posValue instanceof BlockPos blockPos
+                    ? blockPos : CinematicCompatClientHooks.currentScenePos();
+            if (pos == null || Minecraft.getInstance().level == null) {
+                return hands;
+            }
+            ShelfDefinition shelf = shelfDefinition(Minecraft.getInstance().level.getBlockState(pos).getBlock());
+            SpineRect rect = rect(shelf, slot);
+            if (rect == null) {
+                return hands;
+            }
+            // Do not swap completed hand trajectories: that sends the idle hand
+            // to the opposite side. A precise local-variable hook is required.
+            return hands;
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
+            return hands;
+        }
+    }
+
     public static boolean useLeftHandForMove(Object station, boolean original) {
         if (station == null) {
             return original;
