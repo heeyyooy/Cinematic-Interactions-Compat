@@ -431,9 +431,9 @@ public final class CarvedBookshelfCompatHooks {
              * drawShut() rotates its four UV corners separately.
              */
             boardU0 = x0;
-            boardV0 = (r.v0() + 1.3f) / 16.0f;
+            boardV0 = (r.v0() + 0.3f) / 16.0f;
             boardU1 = x1;
-            boardV1 = (r.v0() + 1.7f) / 16.0f;
+            boardV1 = (r.v0() + 0.7f) / 16.0f;
 
             spineU0 = x0;
             spineV0 = y0;
@@ -442,9 +442,9 @@ public final class CarvedBookshelfCompatHooks {
         } else {
             // A vertical book shows its spine; sample the thin central strip
             // for the board colour and the complete spine artwork on the edge.
-            boardU0 = (r.u0() + 1.3f) / 16.0f;
+            boardU0 = (r.u0() + 0.3f) / 16.0f;
             boardV0 = y0;
-            boardU1 = (r.u0() + 1.7f) / 16.0f;
+            boardU1 = (r.u0() + 0.7f) / 16.0f;
             boardV1 = y1;
 
             spineU0 = x0;
