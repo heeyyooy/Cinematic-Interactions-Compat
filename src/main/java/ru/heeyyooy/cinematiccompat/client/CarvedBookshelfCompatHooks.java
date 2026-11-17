@@ -422,24 +422,7 @@ public final class CarvedBookshelfCompatHooks {
         float spineU1;
         float spineV1;
 
-        if (context.shelf().id().equals(CRIMSON_ID)) {
-            // Keep the first crimson test's UV selection unchanged.
-            boardU0 = x0;
-            boardV0 = y0;
-            boardU1 = x1;
-            boardV1 = y1;
-            if (r.horizontal()) {
-                spineU0 = x0;
-                spineV0 = (r.v0() + 0.3f) / 16.0f;
-                spineU1 = x1;
-                spineV1 = (r.v0() + 0.7f) / 16.0f;
-            } else {
-                spineU0 = (r.u0() + 0.3f) / 16.0f;
-                spineV0 = y0;
-                spineU1 = (r.u0() + 0.7f) / 16.0f;
-                spineV1 = y1;
-            }
-        } else if (r.horizontal()) {
+        if (r.horizontal()) {
             /*
              * The acacia books lie sideways. The broad cover samples the
              * narrow middle band of the book image across its full length.
@@ -536,50 +519,50 @@ public final class CarvedBookshelfCompatHooks {
      * Only TAKE/PUT moves use one working hand. OPEN/CLOSE intentionally use
      * both hands and must retain the original animation.
      */
-    public static Vec3[] correctWorkingHand(Object station, Vec3[] hands) {
-        if (station == null || hands == null || hands.length != 2) {
-            return hands;
+    /**
+     * Select the working hand from the selected Carved Wood slot's real X
+     * centre. This is injected into ShelfStation's local leftWorks boolean
+     * before it calculates arm trajectories; the finished hand positions are
+     * never swapped.
+     */
+    public static boolean useLeftHandForMove(Object station, boolean original) {
+        if (station == null) {
+            return original;
         }
 
         try {
             Object move = readField(station, "move");
             String moveName = move == null ? "" : move.toString();
             if (!"TAKE".equals(moveName) && !"PUT".equals(moveName)) {
-                return hands;
+                return original;
             }
 
             Object slotValue = readField(station, "moveSlot");
             if (!(slotValue instanceof Number number)) {
-                return hands;
+                return original;
             }
             int slot = number.intValue();
             if (slot < 0) {
-                return hands;
+                return original;
             }
 
             Object posValue = readField(station, "pos");
             BlockPos pos = posValue instanceof BlockPos blockPos
                     ? blockPos : CinematicCompatClientHooks.currentScenePos();
             if (pos == null || Minecraft.getInstance().level == null) {
-                return hands;
+                return original;
             }
 
             ShelfDefinition shelf = shelfDefinition(Minecraft.getInstance().level.getBlockState(pos).getBlock());
             SpineRect rect = rect(shelf, slot);
             if (rect == null) {
-                return hands;
+                return original;
             }
 
-            boolean originalUsesLeft = slot % 3 == 0;
-            boolean slotIsOnLeft = (rect.u0() + rect.u1()) / 2.0 < 8.0;
-            if (originalUsesLeft == slotIsOnLeft) {
-                return hands;
-            }
-
-            // handsOverride() returns [rightHand, leftHand].
-            return new Vec3[]{hands[1], hands[0]};
+            // Set the working-hand choice before both arm positions are computed.
+            return (rect.u0() + rect.u1()) / 2.0 < 8.0;
         } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
-            return hands;
+            return original;
         }
     }
 
