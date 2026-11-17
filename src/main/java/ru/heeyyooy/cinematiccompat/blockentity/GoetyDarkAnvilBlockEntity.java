@@ -45,7 +45,7 @@ public final class GoetyDarkAnvilBlockEntity extends BlockEntity implements Cont
         }
     }
 
-    public NonNullList<ItemStack> getItems() { return this.items; }
+    @Override public AABB getRenderBoundingBox() {\n        return new AABB(this.worldPosition).inflate(0.25, 1.0, 0.25);\n    }\n\n    public NonNullList<ItemStack> getItems() { return this.items; }
     @Override public int getContainerSize() { return SLOT_COUNT; }
     @Override public boolean isEmpty() { return this.items.stream().allMatch(ItemStack::isEmpty); }
     @Override public ItemStack getItem(int slot) {
