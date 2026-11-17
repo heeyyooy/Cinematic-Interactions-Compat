@@ -242,19 +242,24 @@ public final class CarvedBookshelfCompatHooks {
         }
 
         /*
-         * Every Compat chiseled bookshelves use the regular vanilla six-slot
-         * layout. Their hover art should come from Carved Wood's spruce
-         * bookshelf atlas instead of Cinematic Interactions' vanilla oak
-         * texture. Keep the actual Every Compat block ID in this definition
-         * so each dynamic wood variant resolves independently.
+         * Every Compat / Carved Wood generates a recoloured occupied-books
+         * atlas for each dynamic wood block. The generated path is derived
+         * from that block's full path:
+         *
+         *   block/<module>/<source-namespace>/<generated-block-name>_occupied
+         *
+         * For example, a Quark Blossom shelf registered as
+         * everycomp:crwo/quark/chiseled_blossom_books gets its atlas from
+         * everycomp:block/crwo/quark/chiseled_blossom_books_occupied.
+         *
+         * Do not point all these shelves at the generic spruce source texture:
+         * that source is only the input used by Every Compat's recolouring
+         * pipeline, not the final texture shown on the generated shelf.
          */
-        if ("everycomp".equals(id.getNamespace())
-                && id.getPath().contains("chiseled_bookshelf")) {
-            return new ShelfDefinition(
-                    id,
-                    "carved_wood:block/chiseled_spruce_bookshelf_occupied",
-                    VANILLA_SPINES
-            );
+        if ("everycomp".equals(id.getNamespace())) {
+            String generatedTexturePath = "block/" + id.getPath() + "_occupied";
+            String generatedTexture = id.getNamespace() + ":" + generatedTexturePath;
+            return new ShelfDefinition(id, generatedTexture, VANILLA_SPINES);
         }
 
         return null;
