@@ -10,7 +10,7 @@ logoFile = "icon.png"
 authors = "heeyyooy"
 description = '''
 Unofficial NeoForge compatibility addon for Cinematic Interactions 0.18.30 on Minecraft 1.21.1.
-Provides integrations for Easy Magic, Easy Anvils, Carved Wood, Every Compat, Quark, Caverns & Chasms, and Amendments.
+Provides integrations for Easy Magic, Easy Anvils, Goety, Carved Wood, Every Compat, Quark, Caverns & Chasms, and Amendments.
 '''
 
 [[dependencies.cinematiccompat]]
@@ -38,6 +38,20 @@ side = "BOTH"
 modId = "amendments"
 type = "optional"
 versionRange = "[1.21-2.2.7,)"
+ordering = "AFTER"
+side = "BOTH"
+
+[[dependencies.cinematiccompat]]
+modId = "goety"
+type = "optional"
+versionRange = "[3.0.0,)"
+ordering = "AFTER"
+side = "BOTH"
+
+[[dependencies.cinematiccompat]]
+modId = "easyanvils"
+type = "optional"
+versionRange = "[21.1.0,)"
 ordering = "AFTER"
 side = "BOTH"
 

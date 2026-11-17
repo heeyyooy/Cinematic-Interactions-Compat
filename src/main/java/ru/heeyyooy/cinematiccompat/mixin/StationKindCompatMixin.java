@@ -91,11 +91,23 @@ public abstract class StationKindCompatMixin {
             return "CHISELED_BOOKSHELF";
         }
 
-        // Every Compat variants may use wrapper blocks rather than vanilla subclasses.
+        // Goety's DarkAnvilBlock extends FallingBlock instead of AnvilBlock.
+        // Its three damage stages share the horizontal FACING property and
+        // its DarkAnvilMenu extends AnvilMenu, so the native ANVIL scene can
+        // handle all stages without replacing Goety's own menu or mechanics.
         ResourceLocation id = BuiltInRegistries.BLOCK.getKey(block);
         String namespace = id.getNamespace();
         String path = id.getPath();
 
+        if (namespace.equals("goety")
+                && (path.equals("dark_anvil")
+                || path.equals("chipped_dark_anvil")
+                || path.equals("damaged_dark_anvil"))
+                && state.hasProperty(HorizontalDirectionalBlock.FACING)) {
+            return "ANVIL";
+        }
+
+        // Every Compat variants may use wrapper blocks rather than vanilla subclasses.
         if (namespace.equals("everycomp") || namespace.equals("carved_wood")) {
             if (path.contains("crafting_table")) {
                 return "TABLE";

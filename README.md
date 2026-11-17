@@ -7,6 +7,7 @@ Unofficial NeoForge compatibility addon for **Cinematic Interactions 0.18.30** o
 - **Cinematic Interactions 0.18.30** — required.
 - **Easy Magic** — enchanting-table rendering, enchantment clues and reroll interaction.
 - **Easy Anvils** — anvil item rendering and scene outro.
+- **Goety** — all three Dark Anvil damage stages (normal, chipped and damaged) use the Cinematic Interactions anvil scene.
 - **Carved Wood** — crafting tables, crafters, lecterns, campfires and chiseled bookshelves.
 - **Every Compat** — generated Carved Wood chiseled-bookshelf variants and their book textures.
 - **Quark** — modded furnaces.
@@ -15,6 +16,12 @@ Unofficial NeoForge compatibility addon for **Cinematic Interactions 0.18.30** o
 
 All mods except Cinematic Interactions are optional. Install only the integrations you need. Compatibility is intended for Minecraft 1.21.1 and NeoForge 21.1.x.
 
+### Goety and Easy Anvils
+
+Goety's Dark Anvil has its own `DarkAnvilMenu`, which extends Minecraft's `AnvilMenu`. The addon recognizes the normal, chipped and damaged Goety blocks as anvil stations, so Cinematic Interactions can use its native anvil scene.
+
+Easy Anvils can remain installed alongside Goety. Its block conversion targets vanilla `AnvilBlock` implementations, while Goety's Dark Anvil is a separate `FallingBlock` implementation. The addon therefore preserves Goety's own menu, repair costs, damage stages and soul-powered repair behavior instead of replacing them with Easy Anvils' menu. Easy Anvils' storage and rebalance features are not applied to Goety's Dark Anvil.
+
 ## Build
 
 Requirements: **64-bit Java 21** and an internet connection for the Gradle bootstrap/dependencies.
@@ -22,13 +29,13 @@ Requirements: **64-bit Java 21** and an internet connection for the Gradle boots
 On Windows, run `build.bat` or:
 
 ```powershell
-.\gradlew.bat clean build
+.\\gradlew.bat clean build
 ```
 
 The JAR is created in:
 
 ```
-build\libs\Cinematic Interactions-Compat-NeoForge-1.21.1-1.0.0.jar
+build\\libs\\Cinematic Interactions-Compat-NeoForge-1.21.1-1.0.0.jar
 ```
 
 Copy it to your Minecraft instance's `mods` folder together with Cinematic Interactions and any optional supported mods.
@@ -48,6 +55,7 @@ MIT. See [LICENSE](LICENSE).
 - **Cinematic Interactions 0.18.30** — обязательный мод.
 - **Easy Magic** — отображение предметов на столе зачарования, подсказки зачарований и повторный выбор.
 - **Easy Anvils** — отображение предметов на наковальне и анимация выхода.
+- **Goety** — все три состояния тёмной наковальни (обычное, сколотое и повреждённое) используют сцену наковальни Cinematic Interactions.
 - **Carved Wood** — верстаки, сборщики, кафедры, костры и резные книжные полки.
 - **Every Compat** — созданные Every Compat варианты резных книжных полок Carved Wood и их текстуры книг.
 - **Quark** — модифицированные печи.
@@ -56,6 +64,12 @@ MIT. See [LICENSE](LICENSE).
 
 Все перечисленные моды, кроме Cinematic Interactions, необязательны. Устанавливайте только нужные интеграции. Совместимость рассчитана на Minecraft 1.21.1 и NeoForge 21.1.x.
 
+### Goety и Easy Anvils
+
+У тёмной наковальни Goety собственное меню `DarkAnvilMenu`, наследующее ванильное `AnvilMenu`. Аддон распознаёт обычную, сколотую и повреждённую наковальни Goety как наковальни, поэтому Cinematic Interactions использует для них штатную сцену.
+
+Easy Anvils можно устанавливать одновременно с Goety. Система замены блоков Easy Anvils предназначена для наследников ванильного `AnvilBlock`, а тёмная наковальня Goety реализована отдельным блоком на основе `FallingBlock`. Поэтому аддон сохраняет собственные меню, стоимость ремонта, стадии износа и восстановление за энергию душ Goety, не подменяя их меню Easy Anvils. Система хранения и балансировка Easy Anvils на тёмную наковальню Goety не распространяются.
+
 ## Сборка
 
 Требования: **64-битная Java 21** и подключение к интернету для загрузки Gradle и зависимостей.
@@ -63,13 +77,13 @@ MIT. See [LICENSE](LICENSE).
 В Windows запустите `build.bat` или выполните в PowerShell:
 
 ```powershell
-.\gradlew.bat clean build
+.\\gradlew.bat clean build
 ```
 
 Готовый JAR появится здесь:
 
 ```
-build\libs\Cinematic Interactions-Compat-NeoForge-1.21.1-1.0.0.jar
+build\\libs\\Cinematic Interactions-Compat-NeoForge-1.21.1-1.0.0.jar
 ```
 
 Скопируйте его в папку `mods` вашего клиента Minecraft вместе с Cinematic Interactions и нужными дополнительными модами.
