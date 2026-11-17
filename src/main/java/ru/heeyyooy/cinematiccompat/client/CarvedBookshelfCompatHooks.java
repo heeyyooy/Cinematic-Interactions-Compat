@@ -230,8 +230,34 @@ public final class CarvedBookshelfCompatHooks {
         if (!(block instanceof ChiseledBookShelfBlock)) {
             return null;
         }
+
         ResourceLocation id = BuiltInRegistries.BLOCK.getKey(block);
-        return id == null ? null : SHELVES.get(id);
+        if (id == null) {
+            return null;
+        }
+
+        ShelfDefinition carvedWoodShelf = SHELVES.get(id);
+        if (carvedWoodShelf != null) {
+            return carvedWoodShelf;
+        }
+
+        /*
+         * Every Compat chiseled bookshelves use the regular vanilla six-slot
+         * layout. Their hover art should come from Carved Wood's spruce
+         * bookshelf atlas instead of Cinematic Interactions' vanilla oak
+         * texture. Keep the actual Every Compat block ID in this definition
+         * so each dynamic wood variant resolves independently.
+         */
+        if ("everycomp".equals(id.getNamespace())
+                && id.getPath().contains("chiseled_bookshelf")) {
+            return new ShelfDefinition(
+                    id,
+                    "carved_wood:block/chiseled_spruce_bookshelf_occupied",
+                    VANILLA_SPINES
+            );
+        }
+
+        return null;
     }
 
     private static SpineRect rect(ShelfDefinition shelf, int slot) {
@@ -564,8 +590,16 @@ public final class CarvedBookshelfCompatHooks {
                 return original;
             }
 
-            // Set the working-hand choice before both arm positions are computed.
-            return (rect.u0() + rect.u1()) / 2.0 < 8.0;
+            // Bamboo slot 5 is the lower-middle book. Although its
+            // measured centre is just left of pixel 8, it belongs to the
+            // middle column and uses the right working hand in the original
+            // three-column hand convention.
+            if (BAMBOO_ID.equals(shelf.id()) && slot == 4) {
+                return false;
+            }
+
+            // Only the far-left column uses the left working hand.
+            return (rect.u0() + rect.u1()) / 2.0 < 6.0;
         } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
             return original;
         }
@@ -632,9 +666,8 @@ public final class CarvedBookshelfCompatHooks {
         Map<ModelResourceLocation, BakedModel> models = event.getModels();
         IdentityHashMap<BakedModel, BakedModel> wrapped = new IdentityHashMap<>();
 
-        for (ResourceLocation id : SHELVES.keySet()) {
-            Block block = BuiltInRegistries.BLOCK.get(id);
-            if (!(block instanceof ChiseledBookShelfBlock)) {
+        for (Block block : BuiltInRegistries.BLOCK) {
+            if (!isSupportedShelf(block.defaultBlockState())) {
                 continue;
             }
 
