@@ -12,6 +12,7 @@
   "client": [
     "EnchantStationEasyMagicMixin",
     "EasyMagicRendererMixin",
+    "EasyMagicBookshelfTooltipMixin",
     "EasyAnvilsRendererMixin",
     "AnvilStationOutroMixin",
     "EnchantStationRerollButtonMixin",
