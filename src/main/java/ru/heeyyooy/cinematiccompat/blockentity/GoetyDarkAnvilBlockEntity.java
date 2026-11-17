@@ -10,6 +10,7 @@ import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.level.block.state.BlockState;
 
 public final class GoetyDarkAnvilBlockEntity extends BlockEntity implements Container {
@@ -45,7 +46,11 @@ public final class GoetyDarkAnvilBlockEntity extends BlockEntity implements Cont
         }
     }
 
-    @Override public AABB getRenderBoundingBox() {\n        return new AABB(this.worldPosition).inflate(0.25, 1.0, 0.25);\n    }\n\n    public NonNullList<ItemStack> getItems() { return this.items; }
+    @Override public AABB getRenderBoundingBox() {
+        return new AABB(this.worldPosition).inflate(0.25, 1.0, 0.25);
+    }
+
+    public NonNullList<ItemStack> getItems() { return this.items; }
     @Override public int getContainerSize() { return SLOT_COUNT; }
     @Override public boolean isEmpty() { return this.items.stream().allMatch(ItemStack::isEmpty); }
     @Override public ItemStack getItem(int slot) {
