@@ -48,6 +48,16 @@ public final class CarvedBookshelfCompatHooks {
             {1, 9, 5, 15}, {6, 10, 10, 15}, {11, 9, 15, 15}
     };
 
+    /*
+     * Every Compat uses the same first five hit rectangles as the vanilla
+     * bookshelf, but its sixth (bottom-right) book follows Carved Wood spruce.
+     * User-supplied inclusive pixel bounds: X=11..14, Y=10..14.
+     */
+    private static final int[][] EVERYCOMP_SPINES = {
+            {1, 2, 5, 7}, {6, 1, 10, 7}, {11, 1, 15, 7},
+            {1, 9, 5, 15}, {6, 10, 10, 15}, {11, 10, 15, 15}
+    };
+
     private static final ResourceLocation CRIMSON_ID =
             ResourceLocation.fromNamespaceAndPath("carved_wood", "chiseled_crimson_bookshelf");
     private static final ResourceLocation ACACIA_ID =
@@ -259,7 +269,7 @@ public final class CarvedBookshelfCompatHooks {
         if ("everycomp".equals(id.getNamespace())) {
             String generatedTexturePath = "block/" + id.getPath() + "_occupied";
             String generatedTexture = id.getNamespace() + ":" + generatedTexturePath;
-            return new ShelfDefinition(id, generatedTexture, VANILLA_SPINES);
+            return new ShelfDefinition(id, generatedTexture, EVERYCOMP_SPINES);
         }
 
         return null;
