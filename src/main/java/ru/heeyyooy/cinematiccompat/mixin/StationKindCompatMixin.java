@@ -4,12 +4,15 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.AbstractFurnaceBlock;
 import net.minecraft.world.level.block.AnvilBlock;
+import net.minecraft.world.level.block.CampfireBlock;
+import net.minecraft.world.level.block.CrafterBlock;
 import net.minecraft.world.level.block.ChiseledBookShelfBlock;
 import net.minecraft.world.level.block.CraftingTableBlock;
 import net.minecraft.world.level.block.EnchantingTableBlock;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.LecternBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
@@ -54,6 +57,18 @@ public abstract class StationKindCompatMixin {
     private static String cinematiccompat$classify(BlockState state) {
         var block = state.getBlock();
 
+        // Carved Wood's CWCrafterBlock extends CrafterBlock and its custom
+        // block entity extends CrafterBlockEntity, so the native CRAFTER
+        // scene can operate on it unchanged.
+        if (block instanceof CrafterBlock
+                && state.hasProperty(BlockStateProperties.ORIENTATION)) {
+            return "CRAFTER";
+        }
+        // Carved Wood's normal and soul campfires subclass CampfireBlock.
+        // Class-based recognition avoids relying on an optional tag entry.
+        if (block instanceof CampfireBlock) {
+            return "CAMPFIRE";
+        }
         if (block instanceof CraftingTableBlock) {
             return "TABLE";
         }
