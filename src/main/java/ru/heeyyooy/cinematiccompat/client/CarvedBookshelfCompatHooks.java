@@ -56,34 +56,43 @@ public final class CarvedBookshelfCompatHooks {
             ResourceLocation.fromNamespaceAndPath("carved_wood", "chiseled_bamboo_bookshelf");
     private static final ResourceLocation BIRCH_ID =
             ResourceLocation.fromNamespaceAndPath("carved_wood", "chiseled_birch_bookshelf");
+    private static final ResourceLocation CHERRY_ID =
+            ResourceLocation.fromNamespaceAndPath("carved_wood", "chiseled_cherry_bookshelf");
+    private static final ResourceLocation DARK_OAK_ID =
+            ResourceLocation.fromNamespaceAndPath("carved_wood", "chiseled_dark_oak_bookshelf");
+    private static final ResourceLocation JUNGLE_ID =
+            ResourceLocation.fromNamespaceAndPath("carved_wood", "chiseled_jungle_bookshelf");
+    private static final ResourceLocation MANGROVE_ID =
+            ResourceLocation.fromNamespaceAndPath("carved_wood", "chiseled_mangrove_bookshelf");
+    private static final ResourceLocation PALE_OAK_ID =
+            ResourceLocation.fromNamespaceAndPath("carved_wood", "chiseled_pale_oak_bookshelf");
+    private static final ResourceLocation SPRUCE_ID =
+            ResourceLocation.fromNamespaceAndPath("carved_wood", "chiseled_spruce_bookshelf");
+    private static final ResourceLocation WARPED_ID =
+            ResourceLocation.fromNamespaceAndPath("carved_wood", "chiseled_warped_bookshelf");
 
     private record ShelfDefinition(ResourceLocation id, String texture, int[][] rectangles) {
     }
 
     /*
-     * Existing crimson values are intentionally preserved in this iteration.
-     * New values are the user's inclusive pixel coordinates converted to
-     * exclusive right/bottom edges.
-     *
-     * Slot order: top-left, top-mid, top-right, bottom-left, bottom-mid,
-     * bottom-right. This is also slot_0_occupied through slot_5_occupied in
-     * Carved Wood's generated blockstates.
+     * Rectangles use inclusive pixel coordinates supplied by the user,
+     * converted to right/bottom-exclusive UV edges by adding one to X2/Y2.
+     * Slot order: top-left, top-middle, top-right, bottom-left, bottom-middle,
+     * bottom-right. This matches SLOT_OCCUPIED_PROPERTIES[0..5].
      */
-    private static final Map<ResourceLocation, ShelfDefinition> SHELVES = Map.of(
-            CRIMSON_ID, new ShelfDefinition(
-                    CRIMSON_ID,
-                    "carved_wood:block/chiseled_crimson_bookshelf_occupied",
+    private static final Map<ResourceLocation, ShelfDefinition> SHELVES = Map.ofEntries(
+            Map.entry(CRIMSON_ID, new ShelfDefinition(
+                    CRIMSON_ID, "carved_wood:block/chiseled_crimson_bookshelf_occupied",
                     new int[][]{
                             {4, 1, 6, 5},
-                            {11, 1, 15, 5},
-                            {2, 7, 5, 11},
-                            {8, 7, 14, 11},
-                            {1, 12, 8, 16},
-                            {11, 12, 15, 16}
-                    }),
-            ACACIA_ID, new ShelfDefinition(
-                    ACACIA_ID,
-                    "carved_wood:block/chiseled_acacia_bookshelf_occupied",
+                            {11, 1, 14, 5},
+                            {2, 6, 5, 10},
+                            {8, 6, 14, 10},
+                            {1, 11, 8, 15},
+                            {11, 11, 14, 15}
+                    })),
+            Map.entry(ACACIA_ID, new ShelfDefinition(
+                    ACACIA_ID, "carved_wood:block/chiseled_acacia_bookshelf_occupied",
                     new int[][]{
                             {1, 2, 7, 5},
                             {8, 1, 15, 5},
@@ -91,10 +100,9 @@ public final class CarvedBookshelfCompatHooks {
                             {10, 7, 15, 10},
                             {1, 11, 7, 15},
                             {9, 12, 15, 15}
-                    }),
-            BAMBOO_ID, new ShelfDefinition(
-                    BAMBOO_ID,
-                    "carved_wood:block/chiseled_bamboo_bookshelf_occupied",
+                    })),
+            Map.entry(BAMBOO_ID, new ShelfDefinition(
+                    BAMBOO_ID, "carved_wood:block/chiseled_bamboo_bookshelf_occupied",
                     new int[][]{
                             {1, 2, 5, 9},
                             {7, 1, 11, 6},
@@ -102,10 +110,9 @@ public final class CarvedBookshelfCompatHooks {
                             {1, 10, 5, 15},
                             {6, 10, 9, 15},
                             {11, 9, 15, 15}
-                    }),
-            BIRCH_ID, new ShelfDefinition(
-                    BIRCH_ID,
-                    "carved_wood:block/chiseled_birch_bookshelf_occupied",
+                    })),
+            Map.entry(BIRCH_ID, new ShelfDefinition(
+                    BIRCH_ID, "carved_wood:block/chiseled_birch_bookshelf_occupied",
                     new int[][]{
                             {2, 1, 6, 7},
                             {9, 1, 12, 7},
@@ -113,7 +120,77 @@ public final class CarvedBookshelfCompatHooks {
                             {1, 10, 4, 15},
                             {4, 11, 7, 15},
                             {10, 9, 14, 15}
-                    })
+                    })),
+            Map.entry(CHERRY_ID, new ShelfDefinition(
+                    CHERRY_ID, "carved_wood:block/chiseled_cherry_bookshelf_occupied",
+                    new int[][]{
+                            {1, 2, 5, 5},
+                            {6, 7, 10, 10},
+                            {11, 2, 15, 5},
+                            {1, 7, 5, 10},
+                            {6, 12, 10, 15},
+                            {11, 7, 15, 10}
+                    })),
+            Map.entry(DARK_OAK_ID, new ShelfDefinition(
+                    DARK_OAK_ID, "carved_wood:block/chiseled_dark_oak_bookshelf_occupied",
+                    new int[][]{
+                            {2, 1, 7, 5},
+                            {9, 1, 15, 5},
+                            {1, 6, 7, 10},
+                            {10, 6, 15, 10},
+                            {1, 11, 7, 15},
+                            {10, 11, 15, 15}
+                    })),
+            Map.entry(JUNGLE_ID, new ShelfDefinition(
+                    JUNGLE_ID, "carved_wood:block/chiseled_jungle_bookshelf_occupied",
+                    new int[][]{
+                            {2, 2, 7, 4},
+                            {1, 5, 7, 8},
+                            {10, 1, 14, 6},
+                            {2, 10, 6, 15},
+                            {9, 9, 14, 11},
+                            {9, 12, 15, 15}
+                    })),
+            Map.entry(MANGROVE_ID, new ShelfDefinition(
+                    MANGROVE_ID, "carved_wood:block/chiseled_mangrove_bookshelf_occupied",
+                    new int[][]{
+                            {2, 4, 6, 6},
+                            {10, 4, 14, 6},
+                            {2, 8, 6, 10},
+                            {10, 8, 14, 10},
+                            {2, 12, 6, 14},
+                            {10, 12, 14, 14}
+                    })),
+            Map.entry(PALE_OAK_ID, new ShelfDefinition(
+                    PALE_OAK_ID, "carved_wood:block/chiseled_pale_oak_bookshelf_occupied",
+                    new int[][]{
+                            {1, 3, 4, 8},
+                            {6, 2, 10, 8},
+                            {12, 2, 15, 8},
+                            {1, 9, 4, 15},
+                            {6, 10, 10, 15},
+                            {12, 10, 15, 15}
+                    })),
+            Map.entry(SPRUCE_ID, new ShelfDefinition(
+                    SPRUCE_ID, "carved_wood:block/chiseled_spruce_bookshelf_occupied",
+                    new int[][]{
+                            {1, 2, 5, 7},
+                            {6, 1, 10, 7},
+                            {11, 1, 15, 7},
+                            {1, 9, 5, 15},
+                            {6, 10, 10, 15},
+                            {11, 10, 15, 15}
+                    })),
+            Map.entry(WARPED_ID, new ShelfDefinition(
+                    WARPED_ID, "carved_wood:block/chiseled_warped_bookshelf_occupied",
+                    new int[][]{
+                            {1, 2, 6, 5},
+                            {10, 2, 15, 5},
+                            {1, 6, 6, 10},
+                            {9, 6, 15, 10},
+                            {1, 11, 7, 14},
+                            {10, 11, 15, 14}
+                    }))
     );
 
     private record SpineRect(int u0, int v0, int u1, int v1) {
