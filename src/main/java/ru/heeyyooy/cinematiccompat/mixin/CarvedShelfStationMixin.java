@@ -12,6 +12,7 @@ import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import ru.heeyyooy.cinematiccompat.client.CarvedBookshelfCompatHooks;
@@ -30,9 +31,9 @@ public abstract class CarvedShelfStationMixin {
         }
     }
 
-    @Inject(method = "handsOverride", at = @At("RETURN"), cancellable = true, remap = false)
-    private void cinematiccompat$correctCarvedBookWorkingHand(CallbackInfoReturnable<Vec3[]> cir) {
-        cir.setReturnValue(CarvedBookshelfCompatHooks.correctWorkingHand(this, cir.getReturnValue()));
+    @ModifyVariable(method = "handsOverride", at = @At("STORE"), ordinal = 0, remap = false)
+    private boolean cinematiccompat$selectCarvedBookWorkingHand(boolean original) {
+        return CarvedBookshelfCompatHooks.useLeftHandForMove(this, original);
     }
 
     @Inject(method = "renderBooks", at = @At("HEAD"), remap = false)
