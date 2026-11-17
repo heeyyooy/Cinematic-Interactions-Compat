@@ -98,6 +98,15 @@ public final class CinematicCompatClientHooks {
     private CinematicCompatClientHooks() {
     }
 
+    public static boolean isSceneActive() {
+        if (ACTIVE_METHOD == null) return false;
+        try {
+            return Boolean.TRUE.equals(ACTIVE_METHOD.invoke(null));
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
+            return false;
+        }
+    }
+
     public static boolean isSceneActiveAt(BlockPos pos) {
         if (pos == null || ACTIVE_METHOD == null || STATION_FIELD == null || STATION_POS_FIELD == null) {
             return false;

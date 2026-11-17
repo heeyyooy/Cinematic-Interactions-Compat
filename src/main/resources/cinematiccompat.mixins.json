@@ -7,7 +7,9 @@
     "StationKindCompatMixin",
     "TableGridCompatMixin",
     "MenuActionsLecternDataMixin",
-    "AmendmentsLecternEntityMixin"
+    "AmendmentsLecternEntityMixin",
+    "GoetyDarkAnvilBlockMixin",
+    "GoetyDarkAnvilInventoryDropMixin"
   ],
   "client": [
     "EnchantStationEasyMagicMixin",
@@ -20,7 +22,12 @@
     "CarvedShelfStationMixin",
     "CarvedShelfBooksMixin",
     "CarvedShelfModelsMixin",
-    "CarvedOpenBookTextureMixin"
+    "CarvedOpenBookTextureMixin",
+    "ItemCombinerMenuAccessor",
+    "SlotContainerAccessor",
+    "GoetyDarkAnvilMenuMixin",
+    "ItemCombinerMenuPersistentAnvilMixin",
+    "CombatRollHudMixin"
   ],
   "injectors": {
     "defaultRequire": 1
