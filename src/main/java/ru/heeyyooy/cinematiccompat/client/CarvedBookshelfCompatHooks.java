@@ -439,16 +439,84 @@ public final class CarvedBookshelfCompatHooks {
         if (!isCurrentBookHorizontal() || original == null || original.length != 8) {
             return original;
         }
-        // OpenBook.boardUv() orders corners as:
-        // (near-left, near-right, far-right, far-left). For a sideways book,
-        // the texture's long U axis must follow the book's long horizontal
-        // axis (vertices 0->3), not its depth axis (vertices 0->1).
+        // A quarter-turn in the opposite direction from the previous
+        // mapping. The former [0, 3, 2, 1] corner order mirrored the artwork;
+        // this cyclic order rotates it without reflecting it.
         return new float[]{
-                original[0], original[1],
-                original[6], original[7],
+                original[2], original[3],
                 original[4], original[5],
-                original[2], original[3]
+                original[6], original[7],
+                original[0], original[1]
         };
+    }
+
+    /**
+     * The upstream bookshelf scene chooses the working hand with
+     * moveSlot % 3 == 0. That assumes a regular 3-column grid. Carved Wood
+     * shelves place some slots in a different column, so select the hand from
+     * the measured X centre of the selected book instead.
+     *
+     * Only TAKE/PUT moves use one working hand. OPEN/CLOSE intentionally use
+     * both hands and must retain the original animation.
+     */
+    public static Vec3[] correctWorkingHand(Object station, Vec3[] hands) {
+        if (station == null || hands == null || hands.length != 2) {
+            return hands;
+        }
+
+        try {
+            Object move = readField(station, "move");
+            String moveName = move == null ? "" : move.toString();
+            if (!"TAKE".equals(moveName) && !"PUT".equals(moveName)) {
+                return hands;
+            }
+
+            Object slotValue = readField(station, "moveSlot");
+            if (!(slotValue instanceof Number number)) {
+                return hands;
+            }
+            int slot = number.intValue();
+            if (slot < 0) {
+                return hands;
+            }
+
+            Object posValue = readField(station, "pos");
+            BlockPos pos = posValue instanceof BlockPos blockPos
+                    ? blockPos : CinematicCompatClientHooks.currentScenePos();
+            if (pos == null || Minecraft.getInstance().level == null) {
+                return hands;
+            }
+
+            ShelfDefinition shelf = shelfDefinition(Minecraft.getInstance().level.getBlockState(pos).getBlock());
+            SpineRect rect = rect(shelf, slot);
+            if (rect == null) {
+                return hands;
+            }
+
+            boolean originalUsesLeft = slot % 3 == 0;
+            boolean slotIsOnLeft = (rect.u0() + rect.u1()) / 2.0 < 8.0;
+            if (originalUsesLeft == slotIsOnLeft) {
+                return hands;
+            }
+
+            // handsOverride() returns [rightHand, leftHand].
+            return new Vec3[]{hands[1], hands[0]};
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
+            return hands;
+        }
+    }
+
+    private static Object readField(Object instance, String name) throws ReflectiveOperationException {
+        for (Class<?> type = instance.getClass(); type != null; type = type.getSuperclass()) {
+            try {
+                Field field = type.getDeclaredField(name);
+                field.setAccessible(true);
+                return field.get(instance);
+            } catch (NoSuchFieldException ignored) {
+                // Continue through the superclass hierarchy.
+            }
+        }
+        throw new NoSuchFieldException(name);
     }
 
     public static void clearContext() {
