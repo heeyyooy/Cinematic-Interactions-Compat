@@ -233,7 +233,8 @@ public final class CarvedBookshelfCompatHooks {
     }
 
     public static boolean isSupportedShelf(BlockState state) {
-        return state != null && shelfDefinition(state.getBlock()) != null;
+        return state != null
+                && (state.is(Blocks.CHISELED_BOOKSHELF) || shelfDefinition(state.getBlock()) != null);
     }
 
     private static ShelfDefinition shelfDefinition(Block block) {
@@ -323,6 +324,46 @@ public final class CarvedBookshelfCompatHooks {
 
     public static int[][] spinesForCurrentScene() {
         return spinesFor(CinematicCompatClientHooks.currentScenePos());
+    }
+
+    /**
+     * Resolves Easy Magic's hovered book slot using the actual per-shelf book
+     * rectangles. Vanilla and unknown bookshelf blocks are left to Easy Magic.
+     *
+     * @return a slot index, -1 when this handled shelf has no book under the
+     *         cursor, or NOT_HANDLED when the original Easy Magic logic should run.
+     */
+    public static int tooltipSlotAt(BlockPos pos, Direction facing, Vec3 point) {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.level == null || pos == null || facing == null || point == null) {
+            return NOT_HANDLED;
+        }
+
+        BlockState state = minecraft.level.getBlockState(pos);
+        ShelfDefinition shelf = shelfDefinition(state.getBlock());
+        if (shelf == null) {
+            return NOT_HANDLED;
+        }
+
+        Vec3 normal = Vec3.atLowerCornerOf(facing.getNormal());
+        Vec3 right = Vec3.atLowerCornerOf(facing.getCounterClockWise().getNormal());
+        Vec3 relative = point.subtract(Vec3.atCenterOf(pos).add(normal.scale(0.5)));
+        double u = 8.0 + relative.dot(right) * 16.0;
+        double v = 8.0 - relative.y * 16.0;
+
+        if (Math.abs(relative.dot(normal)) > 0.05 || u < 0.0 || u > 16.0 || v < 0.0 || v > 16.0) {
+            return -1;
+        }
+
+        int[][] rectangles = shelf.rectangles();
+        for (int i = 0; i < rectangles.length; i++) {
+            int[] rectangle = rectangles[i];
+            if (u >= rectangle[0] - 0.001 && u <= rectangle[2] + 0.001
+                    && v >= rectangle[1] - 0.001 && v <= rectangle[3] + 0.001) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     public static int slotAt(BlockPos pos, Direction facing, Vec3 point) {
