@@ -22,6 +22,9 @@ public final class GoetyDarkAnvilBlockEntity extends BlockEntity implements Cont
 
     @Override protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
+        // Empty slots are omitted from the serialized Items list. Clear the old
+        // client-side contents first so removed items cannot remain visible.
+        this.items.clear();
         ContainerHelper.loadAllItems(tag, this.items, registries);
     }
 
