@@ -1,0 +1,9 @@
+{
+  "cinematiccompat.hint.reroll": "ЛКМ — обновить чары",
+  "cinematiccompat.hint.reroll_unavailable": "Не хватает опыта или катализатора",
+  "cinematiccompat.reroll.cost.catalyst": "%s ×%s",
+  "cinematiccompat.reroll.cost.experience": "Опыт ×%s XP",
+  "cinematiccompat.reroll.cost.levels": "Уровни ×%s",
+  "cinematiccompat.reroll.cost.generic_catalyst": "Катализатор",
+  "cinematiccompat.reroll.cost.free": "Бесплатно"
+}

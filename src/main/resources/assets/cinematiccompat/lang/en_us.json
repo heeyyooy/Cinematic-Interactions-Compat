@@ -1,0 +1,9 @@
+{
+  "cinematiccompat.hint.reroll": "Left-click to reroll enchantments",
+  "cinematiccompat.hint.reroll_unavailable": "Not enough XP or reroll catalyst",
+  "cinematiccompat.reroll.cost.catalyst": "%s ×%s",
+  "cinematiccompat.reroll.cost.experience": "Experience ×%s XP",
+  "cinematiccompat.reroll.cost.levels": "Levels ×%s",
+  "cinematiccompat.reroll.cost.generic_catalyst": "Catalyst",
+  "cinematiccompat.reroll.cost.free": "Free"
+}
