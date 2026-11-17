@@ -10,7 +10,6 @@ import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.level.block.state.BlockState;
 
 public final class GoetyDarkAnvilBlockEntity extends BlockEntity implements Container {
@@ -44,10 +43,6 @@ public final class GoetyDarkAnvilBlockEntity extends BlockEntity implements Cont
         if (this.level != null) {
             this.level.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), 3);
         }
-    }
-
-    @Override public AABB getRenderBoundingBox() {
-        return new AABB(this.worldPosition).inflate(0.25, 1.0, 0.25);
     }
 
     public NonNullList<ItemStack> getItems() { return this.items; }
