@@ -530,41 +530,6 @@ public final class CarvedBookshelfCompatHooks {
      * remaining issue is the idle arm endpoint, which must be derived from
      * the upstream animation rather than guessed from the returned vectors.
      */
-    public static Vec3[] correctWorkingHand(Object station, Vec3[] hands) {
-        if (station == null || hands == null || hands.length != 2) {
-            return hands;
-        }
-        try {
-            Object move = readField(station, "move");
-            String moveName = move == null ? "" : move.toString();
-            if (!"TAKE".equals(moveName) && !"PUT".equals(moveName)) {
-                return hands;
-            }
-            Object slotValue = readField(station, "moveSlot");
-            if (!(slotValue instanceof Number number) || number.intValue() < 0) {
-                return hands;
-            }
-            Object posValue = readField(station, "pos");
-            BlockPos pos = posValue instanceof BlockPos blockPos
-                    ? blockPos : CinematicCompatClientHooks.currentScenePos();
-            if (pos == null || Minecraft.getInstance().level == null) {
-                return hands;
-            }
-            int slot = number.intValue();
-            ShelfDefinition shelf = shelfDefinition(Minecraft.getInstance().level.getBlockState(pos).getBlock());
-            SpineRect rect = rect(shelf, slot);
-            if (rect == null) {
-                return hands;
-            }
-            boolean originalUsesLeft = slot % 3 == 0;
-            boolean slotIsOnLeft = (rect.u0() + rect.u1()) / 2.0 < 8.0;
-            return originalUsesLeft == slotIsOnLeft
-                    ? hands : new Vec3[]{hands[1], hands[0]};
-        } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
-            return hands;
-        }
-    }
-
     public static boolean useLeftHandForMove(Object station, boolean original) {
         if (station == null) {
             return original;
