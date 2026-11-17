@@ -13,6 +13,13 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import ru.heeyyooy.cinematiccompat.blockentity.GoetyDarkAnvilBlockEntity;
 
+/*
+ * Portions of this renderer's item placement logic are adapted from
+ * Fuzs / Easy Anvils (1.21.1), licensed under the Mozilla Public License 2.0.
+ * Source: https://github.com/Fuzss/easy-anvils
+ * See LICENSE-MPL-2.0.txt in the repository root.
+ */
+
 /**
  * Uses Easy Anvils' exact flat, side-by-side item layout for Goety's Dark Anvil.
  * Both inputs are independently placed according to the anvil's facing direction.
