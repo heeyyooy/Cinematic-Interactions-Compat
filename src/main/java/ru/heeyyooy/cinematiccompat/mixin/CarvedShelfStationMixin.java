@@ -30,6 +30,11 @@ public abstract class CarvedShelfStationMixin {
         }
     }
 
+    @Inject(method = "handsOverride", at = @At("RETURN"), cancellable = true, remap = false)
+    private void cinematiccompat$correctCarvedBookWorkingHand(CallbackInfoReturnable<Vec3[]> cir) {
+        cir.setReturnValue(CarvedBookshelfCompatHooks.correctWorkingHand(this, cir.getReturnValue()));
+    }
+
     @Inject(method = "renderBooks", at = @At("HEAD"), remap = false)
     private void cinematiccompat$beginShelfTextureScope(
             PoseStack pose, MultiBufferSource buffers, Camera camera, ClientLevel level, CallbackInfo ci) {
