@@ -11,6 +11,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Coerce;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -41,7 +42,7 @@ public abstract class EasyMagicBookshelfTooltipMixin {
             remap = false
     )
     private static OptionalInt cinematiccompat$useCarvedShelfBookPositions(
-            Object accessor,
+            @Coerce Object accessor,
             BlockHitResult hitResult,
             BlockState blockState) {
         if (blockState.hasProperty(HorizontalDirectionalBlock.FACING)) {
