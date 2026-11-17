@@ -13,6 +13,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import ru.heeyyooy.cinematiccompat.blockentity.GoetyDarkAnvilBlockEntity;
 
@@ -25,6 +26,11 @@ import java.util.List;
  */
 public final class GoetyDarkAnvilRenderer implements BlockEntityRenderer<GoetyDarkAnvilBlockEntity> {
     public GoetyDarkAnvilRenderer(BlockEntityRendererProvider.Context context) {
+    }
+
+    @Override
+    public AABB getRenderBoundingBox(GoetyDarkAnvilBlockEntity blockEntity) {
+        return new AABB(blockEntity.getBlockPos()).inflate(0.25, 1.0, 0.25);
     }
 
     @Override
